@@ -3,7 +3,6 @@
 import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
 
 import { useLocalStorageState } from "@/lib/hooks/use-local-storage";
-import { findCoupon } from "@/lib/data/coupons";
 
 export type CartItem = {
   productSlug: string;
@@ -27,7 +26,8 @@ type CartContextValue = {
   updateQuantity: (productSlug: string, size: string, quantity: number) => void;
   removeItem: (productSlug: string, size: string) => void;
   toggleSavedForLater: (productSlug: string, size: string) => void;
-  applyCoupon: (code: string) => boolean;
+  /** Persists an already-validated code — validation itself happens via getCouponPreview. */
+  applyCoupon: (code: string) => void;
   removeCoupon: () => void;
   clearCart: () => void;
 };
@@ -96,10 +96,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const applyCoupon = useCallback(
     (code: string) => {
-      const coupon = findCoupon(code);
-      if (!coupon) return false;
-      setState((prev) => ({ ...prev, couponCode: coupon.code }));
-      return true;
+      setState((prev) => ({ ...prev, couponCode: code }));
     },
     [setState]
   );

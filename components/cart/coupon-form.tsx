@@ -5,33 +5,48 @@ import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useCouponPreview } from "@/lib/checkout/hooks";
+import { getCouponPreview } from "@/lib/checkout/queries";
 import { useCart } from "@/lib/cart/cart-context";
-import { findCoupon } from "@/lib/data/coupons";
+import { createClient } from "@/lib/supabase/client";
 
-export function CouponForm() {
+export function CouponForm({ subtotal }: { subtotal: number }) {
   const { couponCode, applyCoupon, removeCoupon } = useCart();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
 
-  function submit(e: FormEvent) {
+  const { data: appliedPreview } = useCouponPreview(couponCode ?? "", subtotal);
+
+  async function submit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     if (!code.trim()) return;
-    const ok = applyCoupon(code);
-    if (!ok) {
-      setError("Invalid or expired coupon code");
+
+    setIsChecking(true);
+    const supabase = createClient();
+    const result = await getCouponPreview(supabase, code.trim(), subtotal);
+    setIsChecking(false);
+
+    if (!result.valid) {
+      setError(result.message);
       return;
     }
+    applyCoupon(result.code);
     setCode("");
   }
 
   if (couponCode) {
-    const coupon = findCoupon(couponCode);
     return (
       <div className="flex items-center justify-between rounded-md border border-primary/30 bg-accent px-3 py-2">
         <div>
           <p className="text-sm font-medium text-foreground">{couponCode} applied</p>
-          {coupon && <p className="text-xs text-muted-foreground">{coupon.description}</p>}
+          {appliedPreview?.valid && (
+            <p className="text-xs text-muted-foreground">{appliedPreview.description}</p>
+          )}
+          {appliedPreview && !appliedPreview.valid && (
+            <p className="text-xs text-destructive">{appliedPreview.message}</p>
+          )}
         </div>
         <button
           type="button"
@@ -55,7 +70,7 @@ export function CouponForm() {
           className="h-9"
           aria-invalid={!!error}
         />
-        <Button type="submit" variant="outline" size="sm">
+        <Button type="submit" variant="outline" size="sm" disabled={isChecking}>
           Apply
         </Button>
       </div>

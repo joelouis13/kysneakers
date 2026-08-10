@@ -1,8 +1,9 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { toast } from "sonner";
 
 const currency = new Intl.NumberFormat("en-GH", {
   style: "currency",
@@ -23,6 +24,8 @@ export function OrderSummary({
   total: number;
   itemCount: number;
 }) {
+  const router = useRouter();
+
   return (
     <div className="rounded-xl border border-border p-6">
       <h2 className="font-heading text-xl tracking-wide text-foreground">Order Summary</h2>
@@ -55,9 +58,7 @@ export function OrderSummary({
         size="lg"
         variant="secondary"
         className="mt-6 w-full"
-        onClick={() =>
-          toast.info("Checkout with Moolre mobile money is coming in a future update.")
-        }
+        onClick={() => router.push("/checkout")}
       >
         Proceed to Checkout
       </Button>

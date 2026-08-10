@@ -269,6 +269,12 @@ export interface Database {
           customer_phone: string;
           shipping_address_id: string | null;
           shipping_zone_id: string | null;
+          shipping_recipient_name: string;
+          shipping_phone: string;
+          shipping_region: string;
+          shipping_city: string;
+          shipping_street_address: string;
+          shipping_landmark: string | null;
           delivery_fee: number;
           subtotal: number;
           discount_total: number;
@@ -283,6 +289,7 @@ export interface Database {
         | "status"
         | "shipping_address_id"
         | "shipping_zone_id"
+        | "shipping_landmark"
         | "delivery_fee"
         | "discount_total"
         | "coupon_id"
@@ -315,7 +322,9 @@ export interface Database {
           amount: number;
           currency: string;
           status: PaymentStatus;
+          payer_phone: string;
           provider_reference: string | null;
+          provider_message: string | null;
           webhook_payload: Json | null;
           verified_at: string | null;
           created_at: string;
@@ -326,6 +335,7 @@ export interface Database {
         | "currency"
         | "status"
         | "provider_reference"
+        | "provider_message"
         | "webhook_payload"
         | "verified_at"
         | "created_at"
@@ -466,6 +476,36 @@ export interface Database {
           created_at: string;
           reviewer_name: string;
           verified_purchase: boolean;
+        }[];
+      };
+      increment_coupon_usage: {
+        Args: { p_coupon_id: string };
+        Returns: {
+          id: string;
+          code: string;
+          discount_type: CouponDiscountType;
+          discount_value: number;
+          minimum_purchase: number;
+          usage_limit: number | null;
+          times_used: number;
+          starts_at: string | null;
+          expires_at: string | null;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        } | null;
+      };
+      confirm_payment_success: {
+        Args: {
+          p_payment_id: string;
+          p_provider_reference: string;
+          p_webhook_payload: Json;
+        };
+        Returns: {
+          order_id: string;
+          order_status: OrderStatus;
+          payment_status: PaymentStatus;
         }[];
       };
     };

@@ -3,16 +3,12 @@ import { Bebas_Neue, Inter } from "next/font/google";
 
 import "./globals.css";
 
-import { Footer } from "@/components/layout/footer";
-import { Header } from "@/components/layout/header";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth/auth-context";
-import { CartProvider } from "@/lib/cart/cart-context";
 import { createClient } from "@/lib/supabase/server";
-import { WishlistProvider } from "@/lib/wishlist/wishlist-context";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -35,11 +31,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
 };
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const isStaff = user ? (await supabase.rpc("is_staff")).data ?? false : false;
 
   return (
     <html
@@ -52,15 +49,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <TooltipProvider>
             <QueryProvider>
-              <AuthProvider initialUser={user}>
-                <CartProvider>
-                  <WishlistProvider>
-                    <Header />
-                    <main className="flex-1">{children}</main>
-                    <Footer />
-                    <Toaster />
-                  </WishlistProvider>
-                </CartProvider>
+              <AuthProvider initialUser={user} initialIsStaff={isStaff}>
+                {children}
+                <Toaster />
               </AuthProvider>
             </QueryProvider>
           </TooltipProvider>

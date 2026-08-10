@@ -4,8 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
+import { PasswordInput } from "@/components/auth/password-input";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { updatePassword } from "@/lib/auth/actions";
 import { resetPasswordSchema, type ResetPasswordValues } from "@/lib/auth/schemas";
 
@@ -32,8 +32,7 @@ export function ResetPasswordForm() {
       className="flex w-full max-w-sm flex-col gap-4"
     >
       <div>
-        <Input
-          type="password"
+        <PasswordInput
           placeholder="New password"
           aria-label="New password"
           aria-invalid={!!errors.password}
@@ -45,8 +44,7 @@ export function ResetPasswordForm() {
       </div>
 
       <div>
-        <Input
-          type="password"
+        <PasswordInput
           placeholder="Confirm new password"
           aria-label="Confirm new password"
           aria-invalid={!!errors.confirmPassword}

@@ -32,7 +32,18 @@ export async function login(
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { error: getAuthErrorMessage(error) };
 
-  redirect(getSafeRedirectPath(redirectTo));
+  const safePath = getSafeRedirectPath(redirectTo);
+
+  // No specific page prompted this login (the common default) — send staff
+  // straight to the admin dashboard instead of the storefront home page.
+  // A specific redirect target (e.g. bounced from /admin, or from checkout)
+  // is always respected as-is.
+  if (safePath === "/") {
+    const { data: isStaff } = await supabase.rpc("is_staff");
+    if (isStaff) redirect("/admin");
+  }
+
+  redirect(safePath);
 }
 
 export async function signup(

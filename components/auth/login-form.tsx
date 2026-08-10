@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { GoogleSignInButton } from "@/components/auth/google-signin-button";
+import { PasswordInput } from "@/components/auth/password-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -53,8 +54,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
         </div>
 
         <div>
-          <Input
-            type="password"
+          <PasswordInput
             placeholder="Password"
             aria-label="Password"
             aria-invalid={!!errors.password}

@@ -22,7 +22,7 @@ type Slide = {
 
 const SLIDES: Slide[] = [
   {
-    image: "/hero1.jpg",
+    image: "/hero4.jpeg",
     eyebrow: "New Season",
     title: "Step Into Something Bold",
     description:
@@ -33,7 +33,7 @@ const SLIDES: Slide[] = [
     secondaryHref: "/collections",
   },
   {
-    image: "/hero2.jpg",
+    image: "/hero5.jpeg",
     eyebrow: "Just Dropped",
     title: "New Arrivals Are Here",
     description:

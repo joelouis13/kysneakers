@@ -13,12 +13,12 @@ import { OrderSummary } from "@/components/cart/order-summary";
 import { useProductsBySlugs } from "@/lib/catalog/hooks";
 import type { ProductDetail } from "@/lib/catalog/types";
 import { useCart } from "@/lib/cart/cart-context";
-import { calculateDiscount, findCoupon } from "@/lib/data/coupons";
-import { getShippingZone, shippingZones } from "@/lib/data/shipping-zones";
+import { useCouponPreview, useShippingZones } from "@/lib/checkout/hooks";
 
 export default function CartPage() {
   const { items, activeItems, savedItems, couponCode } = useCart();
-  const [zoneName, setZoneName] = useState(shippingZones[0].name);
+  const { data: zones } = useShippingZones();
+  const [zoneId, setZoneId] = useState<string | null>(null);
 
   const slugs = useMemo(() => [...new Set(items.map((i) => i.productSlug))], [items]);
   const { data: products, isLoading } = useProductsBySlugs(slugs);
@@ -36,9 +36,12 @@ export default function CartPage() {
     }, 0);
   }, [activeItems, productBySlug]);
 
-  const coupon = couponCode ? findCoupon(couponCode) : undefined;
-  const discount = coupon ? calculateDiscount(coupon, subtotal) : 0;
-  const deliveryFee = activeItems.length > 0 ? (getShippingZone(zoneName)?.deliveryFee ?? 0) : 0;
+  const effectiveZoneId = zoneId ?? zones?.[0]?.id ?? null;
+  const selectedZone = zones?.find((z) => z.id === effectiveZoneId);
+
+  const { data: couponPreview } = useCouponPreview(couponCode ?? "", subtotal);
+  const discount = couponPreview?.valid ? couponPreview.discount : 0;
+  const deliveryFee = activeItems.length > 0 ? (selectedZone?.deliveryFee ?? 0) : 0;
   const total = Math.max(0, subtotal - discount) + deliveryFee;
   const itemCount = activeItems.reduce((sum, i) => sum + i.quantity, 0);
 
@@ -118,11 +121,11 @@ export default function CartPage() {
         <div className="space-y-6">
           <div className="rounded-xl border border-border p-6">
             <h2 className="mb-3 text-sm font-semibold text-foreground">Coupon Code</h2>
-            <CouponForm />
+            <CouponForm subtotal={subtotal} />
           </div>
 
           <div className="rounded-xl border border-border p-6">
-            <DeliveryZoneSelect value={zoneName} onChange={setZoneName} />
+            <DeliveryZoneSelect zones={zones ?? []} value={effectiveZoneId} onChange={setZoneId} />
           </div>
 
           <OrderSummary

@@ -7,27 +7,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { shippingZones } from "@/lib/data/shipping-zones";
+import type { ShippingZone } from "@/lib/checkout/types";
 
 export function DeliveryZoneSelect({
+  zones,
   value,
   onChange,
 }: {
-  value: string;
-  onChange: (zone: string) => void;
+  zones: ShippingZone[];
+  value: string | null;
+  onChange: (zoneId: string) => void;
 }) {
   return (
     <div>
       <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted-foreground">
         Delivery Zone
       </label>
-      <Select value={value} onValueChange={onChange}>
+      <Select value={value ?? undefined} onValueChange={onChange}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Select a delivery zone" />
         </SelectTrigger>
         <SelectContent>
-          {shippingZones.map((zone) => (
-            <SelectItem key={zone.name} value={zone.name}>
+          {zones.map((zone) => (
+            <SelectItem key={zone.id} value={zone.id}>
               {zone.name} — {zone.estimatedDaysMin}-{zone.estimatedDaysMax} days
             </SelectItem>
           ))}
