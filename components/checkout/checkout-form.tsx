@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -138,11 +139,18 @@ export function CheckoutForm() {
   const total = Math.max(0, subtotal - discount) + deliveryFee;
   const itemCount = activeItems.reduce((sum, i) => sum + i.quantity, 0);
 
+  const [isNavigating, setIsNavigating] = useState(false);
+
   async function goToNextStep() {
-    const valid = await trigger(STEP_FIELDS[step]);
-    if (!valid) return;
-    if (step === "shipping") setStep("delivery");
-    else if (step === "delivery") setStep("payment");
+    setIsNavigating(true);
+    try {
+      const valid = await trigger(STEP_FIELDS[step]);
+      if (!valid) return;
+      if (step === "shipping") setStep("delivery");
+      else if (step === "delivery") setStep("payment");
+    } finally {
+      setIsNavigating(false);
+    }
   }
 
   function goToPreviousStep() {
@@ -234,10 +242,19 @@ export function CheckoutForm() {
         actionSlot={
           step === "payment" ? (
             <Button type="submit" size="lg" variant="secondary" className="w-full" disabled={isSubmitting}>
-              {isGhana ? "Place Order" : "Continue to Payment"}
+              {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+              {isSubmitting ? "Placing Order..." : isGhana ? "Place Order" : "Continue to Payment"}
             </Button>
           ) : (
-            <Button type="button" size="lg" variant="secondary" className="w-full" onClick={goToNextStep}>
+            <Button
+              type="button"
+              size="lg"
+              variant="secondary"
+              className="w-full"
+              disabled={isNavigating}
+              onClick={goToNextStep}
+            >
+              {isNavigating && <Loader2 className="size-4 animate-spin" />}
               {step === "shipping" ? "Continue to Delivery" : "Continue to Payment"}
             </Button>
           )
@@ -401,7 +418,8 @@ export function CheckoutForm() {
               </section>
 
               <div className="flex justify-end">
-                <Button type="button" onClick={goToNextStep}>
+                <Button type="button" disabled={isNavigating} onClick={goToNextStep}>
+                  {isNavigating && <Loader2 className="size-4 animate-spin" />}
                   Continue to Delivery
                 </Button>
               </div>
@@ -435,7 +453,8 @@ export function CheckoutForm() {
                 <Button type="button" variant="outline" onClick={goToPreviousStep}>
                   Back
                 </Button>
-                <Button type="button" onClick={goToNextStep}>
+                <Button type="button" disabled={isNavigating} onClick={goToNextStep}>
+                  {isNavigating && <Loader2 className="size-4 animate-spin" />}
                   Continue to Payment
                 </Button>
               </div>
