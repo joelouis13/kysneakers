@@ -6,17 +6,11 @@ import { ChevronRight } from "lucide-react";
 import { ProductSection } from "@/components/home/product-section";
 import { AddToCartForm } from "@/components/shop/add-to-cart-form";
 import { ImageGallery } from "@/components/shop/image-gallery";
+import { ProductPrice } from "@/components/shop/product-price";
 import { ProductReviews } from "@/components/shop/product-reviews";
-import { Badge } from "@/components/ui/badge";
 import { getProductBySlug, getRelatedProducts } from "@/lib/catalog/queries";
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
-
-const currency = new Intl.NumberFormat("en-GH", {
-  style: "currency",
-  currency: "GHS",
-  maximumFractionDigits: 0,
-});
 
 export const revalidate = 60;
 
@@ -93,21 +87,7 @@ export default async function ProductPage({
           </h1>
 
           <div className="mt-3 flex items-center gap-3">
-            {product.salePrice ? (
-              <>
-                <span className="text-2xl font-semibold text-secondary">
-                  {currency.format(product.salePrice)}
-                </span>
-                <span className="text-base text-muted-foreground line-through">
-                  {currency.format(product.regularPrice)}
-                </span>
-                <Badge variant="sale">Sale</Badge>
-              </>
-            ) : (
-              <span className="text-2xl font-semibold text-foreground">
-                {currency.format(product.regularPrice)}
-              </span>
-            )}
+            <ProductPrice regularPrice={product.regularPrice} salePrice={product.salePrice} />
           </div>
 
           <p className={cn("mt-2 text-sm font-medium", inStock ? "text-foreground" : "text-destructive")}>

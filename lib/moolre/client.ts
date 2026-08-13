@@ -14,6 +14,8 @@ export function channelForMethod(method: PaymentMethod): MoolreChannel {
       return "6";
     case "airteltigo_money":
       return "7";
+    case "card":
+      throw new Error("channelForMethod called with 'card' — Stripe payments never go through Moolre.");
   }
 }
 

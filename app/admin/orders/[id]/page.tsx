@@ -6,17 +6,12 @@ import { OrderStatusForm } from "@/components/admin/orders/order-status-form";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { getAdminOrderById } from "@/lib/admin/orders/queries";
+import { formatCurrency } from "@/lib/currency/format";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Order Details",
 };
-
-const currency = new Intl.NumberFormat("en-GH", {
-  style: "currency",
-  currency: "GHS",
-  maximumFractionDigits: 0,
-});
 
 export default async function AdminOrderDetailPage({
   params,
@@ -72,7 +67,9 @@ export default async function AdminOrderDetailPage({
           <p className="text-sm text-foreground">{order.shippingRecipientName}</p>
           <p className="text-sm text-muted-foreground">{order.shippingPhone}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {order.shippingStreetAddress}, {order.shippingCity}, {order.shippingRegion}
+            {order.shippingStreetAddress}, {order.shippingCity},{" "}
+            {order.shippingRegion ?? order.shippingCountry}
+            {order.shippingPostalCode ? ` ${order.shippingPostalCode}` : ""}
           </p>
           {order.shippingLandmark && (
             <p className="text-sm text-muted-foreground">Landmark: {order.shippingLandmark}</p>
@@ -88,7 +85,7 @@ export default async function AdminOrderDetailPage({
               <span>
                 {item.productName} ({item.sku}) · {item.size} × {item.quantity}
               </span>
-              <span className="text-foreground">{currency.format(item.lineTotal)}</span>
+              <span className="text-foreground">{formatCurrency(item.lineTotal, order.currency)}</span>
             </div>
           ))}
         </div>
@@ -96,21 +93,21 @@ export default async function AdminOrderDetailPage({
         <div className="space-y-1.5 text-sm">
           <div className="flex justify-between text-muted-foreground">
             <span>Subtotal</span>
-            <span className="text-foreground">{currency.format(order.subtotal)}</span>
+            <span className="text-foreground">{formatCurrency(order.subtotal, order.currency)}</span>
           </div>
           {order.discountTotal > 0 && (
             <div className="flex justify-between text-muted-foreground">
               <span>Discount</span>
-              <span className="text-secondary">-{currency.format(order.discountTotal)}</span>
+              <span className="text-secondary">-{formatCurrency(order.discountTotal, order.currency)}</span>
             </div>
           )}
           <div className="flex justify-between text-muted-foreground">
             <span>Delivery Fee</span>
-            <span className="text-foreground">{currency.format(order.deliveryFee)}</span>
+            <span className="text-foreground">{formatCurrency(order.deliveryFee, order.currency)}</span>
           </div>
           <div className="flex justify-between pt-1 text-base font-semibold text-foreground">
             <span>Total</span>
-            <span>{currency.format(order.total)}</span>
+            <span>{formatCurrency(order.total, order.currency)}</span>
           </div>
         </div>
       </div>
@@ -127,7 +124,8 @@ export default async function AdminOrderDetailPage({
               <div key={payment.id} className="flex items-center justify-between text-sm">
                 <div>
                   <p className="text-foreground">
-                    {payment.method.replace(/_/g, " ")} · {payment.payerPhone}
+                    {payment.method.replace(/_/g, " ")}
+                    {payment.payerPhone ? ` · ${payment.payerPhone}` : ""}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {payment.providerReference ?? "no reference"}

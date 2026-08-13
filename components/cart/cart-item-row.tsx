@@ -8,12 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ProductDetail } from "@/lib/catalog/types";
 import { useCart, type CartItem } from "@/lib/cart/cart-context";
-
-const currency = new Intl.NumberFormat("en-GH", {
-  style: "currency",
-  currency: "GHS",
-  maximumFractionDigits: 0,
-});
+import { useCurrency } from "@/lib/currency/currency-context";
 
 export function CartItemRow({
   item,
@@ -23,6 +18,7 @@ export function CartItemRow({
   product: ProductDetail | undefined;
 }) {
   const { updateQuantity, removeItem, toggleSavedForLater } = useCart();
+  const { formatFromGhs } = useCurrency();
 
   if (!product) {
     return <Skeleton className="h-24 w-full" />;
@@ -108,7 +104,7 @@ export function CartItemRow({
           </div>
 
           <span className="text-sm font-semibold text-foreground">
-            {currency.format(price * item.quantity)}
+            {formatFromGhs(price * item.quantity)}
           </span>
         </div>
       </div>

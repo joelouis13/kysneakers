@@ -1,3 +1,4 @@
+import type { Currency } from "@/lib/currency/config";
 import type { OrderStatus, PaymentMethod, PaymentStatus } from "@/types/database";
 
 export type AdminOrderListItem = {
@@ -7,6 +8,7 @@ export type AdminOrderListItem = {
   customerEmail: string;
   status: OrderStatus;
   total: number;
+  currency: Currency;
   createdAt: string;
 };
 
@@ -23,7 +25,7 @@ export type AdminOrderPayment = {
   id: string;
   status: PaymentStatus;
   method: PaymentMethod;
-  payerPhone: string;
+  payerPhone: string | null;
   providerReference: string | null;
   providerMessage: string | null;
   verifiedAt: string | null;
@@ -40,14 +42,17 @@ export type AdminOrderDetail = {
   customerPhone: string;
   shippingRecipientName: string;
   shippingPhone: string;
-  shippingRegion: string;
+  shippingRegion: string | null;
   shippingCity: string;
   shippingStreetAddress: string;
   shippingLandmark: string | null;
+  shippingCountry: string | null;
+  shippingPostalCode: string | null;
   subtotal: number;
   discountTotal: number;
   deliveryFee: number;
   total: number;
+  currency: Currency;
   notes: string | null;
   createdAt: string;
   items: AdminOrderItem[];

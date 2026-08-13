@@ -1,30 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { Currency } from "@/lib/currency/config";
 import type { Database, PaymentMethod, PaymentStatus } from "@/types/database";
 
-import type {
-  CouponPreview,
-  OrderStatusPayload,
-  ShippingZone,
-} from "./types";
+import type { CouponPreview, OrderStatusPayload } from "./types";
 
 type Client = SupabaseClient<Database>;
-
-export async function getShippingZones(supabase: Client): Promise<ShippingZone[]> {
-  const { data, error } = await supabase
-    .from("shipping_zones")
-    .select("id,name,delivery_fee,estimated_days_min,estimated_days_max")
-    .eq("is_active", true)
-    .order("delivery_fee");
-  if (error) throw error;
-  return (data ?? []).map((z) => ({
-    id: z.id,
-    name: z.name,
-    deliveryFee: z.delivery_fee,
-    estimatedDaysMin: z.estimated_days_min,
-    estimatedDaysMax: z.estimated_days_max,
-  }));
-}
 
 export async function getAddresses(supabase: Client) {
   const { data, error } = await supabase
@@ -88,7 +69,7 @@ export async function getCouponPreview(
 
 const ORDER_STATUS_SELECT = `
   id, order_number, status, customer_email, customer_phone,
-  subtotal, discount_total, delivery_fee, total, created_at,
+  subtotal, discount_total, delivery_fee, total, currency, created_at,
   order_items ( product_name, size, sku, unit_price, quantity, line_total ),
   payments ( id, status, method, provider_message )
 `;
@@ -103,6 +84,7 @@ type OrderStatusRow = {
   discount_total: number;
   delivery_fee: number;
   total: number;
+  currency: string;
   created_at: string;
   order_items: {
     product_name: string;
@@ -131,6 +113,7 @@ export function mapOrderStatusRow(row: OrderStatusRow): OrderStatusPayload {
     discountTotal: row.discount_total,
     deliveryFee: row.delivery_fee,
     total: row.total,
+    currency: row.currency as Currency,
     createdAt: row.created_at,
     items: row.order_items.map((i) => ({
       productName: i.product_name,
@@ -155,7 +138,7 @@ export function mapOrderStatusRow(row: OrderStatusRow): OrderStatusPayload {
 export async function getOwnOrders(supabase: Client) {
   const { data, error } = await supabase
     .from("orders")
-    .select("id,order_number,status,total,created_at")
+    .select("id,order_number,status,total,currency,created_at")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data ?? [];

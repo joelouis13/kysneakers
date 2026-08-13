@@ -1,24 +1,22 @@
 import { z } from "zod";
 
-import { isValidGhPhone } from "@/lib/moolre/phone";
-
-const ghPhone = (message: string) => z.string().refine(isValidGhPhone, message);
+import { SUPPORTED_CURRENCIES } from "@/lib/currency/config";
 
 const shippingSchema = z
   .object({
     addressId: z.string().uuid().optional(),
     recipientName: z.string().min(2, "Enter a recipient name").optional(),
-    phone: ghPhone("Enter a valid Ghana phone number").optional(),
-    region: z.string().min(2, "Enter a region").optional(),
+    phone: z.string().min(7, "Enter a valid phone number").optional(),
+    region: z.string().optional(),
     city: z.string().min(2, "Enter a city").optional(),
     streetAddress: z.string().min(4, "Enter a street address").optional(),
     landmark: z.string().optional(),
+    country: z.string().optional(),
+    postalCode: z.string().optional(),
     saveAddress: z.boolean().optional(),
   })
   .refine(
-    (v) =>
-      !!v.addressId ||
-      !!(v.recipientName && v.phone && v.region && v.city && v.streetAddress),
+    (v) => !!v.addressId || !!(v.recipientName && v.phone && v.city && v.streetAddress),
     {
       message: "Enter a complete shipping address or select a saved one.",
       path: ["recipientName"],
@@ -26,13 +24,16 @@ const shippingSchema = z
   );
 
 export const checkoutSchema = z.object({
+  currency: z.enum(SUPPORTED_CURRENCIES),
   customerName: z.string().min(2, "Enter your full name"),
   customerEmail: z.string().email("Enter a valid email address"),
-  customerPhone: ghPhone("Enter a valid Ghana phone number"),
+  customerPhone: z.string().min(7, "Enter a valid phone number"),
   shipping: shippingSchema,
-  shippingZoneId: z.string().uuid("Select a delivery zone"),
-  paymentMethod: z.enum(["mtn_momo", "telecel_cash", "airteltigo_money"]),
-  payerPhone: ghPhone("Enter a valid Ghana MoMo number"),
+  deliveryMethod: z.enum(["pickup", "delivery", "international"], {
+    message: "Select a delivery method",
+  }),
+  paymentMethod: z.enum(["mtn_momo", "telecel_cash", "airteltigo_money", "card"]),
+  payerPhone: z.string().optional(),
   couponCode: z.string().optional(),
   notes: z.string().max(500).optional(),
   items: z

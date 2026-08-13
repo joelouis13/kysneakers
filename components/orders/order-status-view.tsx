@@ -13,12 +13,7 @@ import { useCart } from "@/lib/cart/cart-context";
 import { retryPayment, submitPaymentOtp } from "@/lib/checkout/actions";
 import { useOrderStatus } from "@/lib/checkout/hooks";
 import type { OrderStatusPayload } from "@/lib/checkout/types";
-
-const currency = new Intl.NumberFormat("en-GH", {
-  style: "currency",
-  currency: "GHS",
-  maximumFractionDigits: 0,
-});
+import { formatCurrency } from "@/lib/currency/format";
 
 const ORDER_STATUS_LABELS: Record<OrderStatusPayload["status"], string> = {
   pending_payment: "Pending Payment",
@@ -113,7 +108,7 @@ export function OrderStatusView({ initialOrder }: { initialOrder: OrderStatusPay
               <span>
                 {item.productName} · {item.size} × {item.quantity}
               </span>
-              <span className="text-foreground">{currency.format(item.lineTotal)}</span>
+              <span className="text-foreground">{formatCurrency(item.lineTotal, order.currency)}</span>
             </div>
           ))}
         </div>
@@ -123,21 +118,21 @@ export function OrderStatusView({ initialOrder }: { initialOrder: OrderStatusPay
         <div className="space-y-1.5 text-sm">
           <div className="flex justify-between text-muted-foreground">
             <span>Subtotal</span>
-            <span className="text-foreground">{currency.format(order.subtotal)}</span>
+            <span className="text-foreground">{formatCurrency(order.subtotal, order.currency)}</span>
           </div>
           {order.discountTotal > 0 && (
             <div className="flex justify-between text-muted-foreground">
               <span>Discount</span>
-              <span className="text-secondary">-{currency.format(order.discountTotal)}</span>
+              <span className="text-secondary">-{formatCurrency(order.discountTotal, order.currency)}</span>
             </div>
           )}
           <div className="flex justify-between text-muted-foreground">
             <span>Delivery Fee</span>
-            <span className="text-foreground">{currency.format(order.deliveryFee)}</span>
+            <span className="text-foreground">{formatCurrency(order.deliveryFee, order.currency)}</span>
           </div>
           <div className="flex justify-between pt-1 text-base font-semibold text-foreground">
             <span>Total</span>
-            <span>{currency.format(order.total)}</span>
+            <span>{formatCurrency(order.total, order.currency)}</span>
           </div>
         </div>
       </div>

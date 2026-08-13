@@ -5,18 +5,8 @@ import { useMemo } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 
-import { getCouponPreview, getShippingZones } from "./queries";
+import { getCouponPreview } from "./queries";
 import { lookupOrderStatus } from "./actions";
-
-export function useShippingZones() {
-  const supabase = useMemo(() => createClient(), []);
-
-  return useQuery({
-    queryKey: ["shipping-zones"],
-    queryFn: () => getShippingZones(supabase),
-    staleTime: 5 * 60 * 1000,
-  });
-}
 
 export function useCouponPreview(code: string, subtotal: number) {
   const supabase = useMemo(() => createClient(), []);

@@ -4,18 +4,14 @@ import { redirect } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { getOwnOrders } from "@/lib/checkout/queries";
+import type { Currency } from "@/lib/currency/config";
+import { formatCurrency } from "@/lib/currency/format";
 import { createClient } from "@/lib/supabase/server";
 import type { OrderStatus } from "@/types/database";
 
 export const metadata: Metadata = {
   title: "My Orders",
 };
-
-const currency = new Intl.NumberFormat("en-GH", {
-  style: "currency",
-  currency: "GHS",
-  maximumFractionDigits: 0,
-});
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   pending_payment: "Pending Payment",
@@ -66,7 +62,7 @@ export default async function OrdersPage() {
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium text-foreground">
-                  {currency.format(order.total)}
+                  {formatCurrency(order.total, order.currency as Currency)}
                 </span>
                 <Badge variant={order.status === "cancelled" ? "destructive" : "secondary"}>
                   {STATUS_LABELS[order.status]}

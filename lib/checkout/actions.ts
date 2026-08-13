@@ -1,12 +1,17 @@
 "use server";
 
+import type { Currency } from "@/lib/currency/config";
+import { convert, convertBetween, getExchangeRates, type ExchangeRates } from "@/lib/currency/rates";
 import { channelForMethod, initiatePayment } from "@/lib/moolre/client";
 import { MoolreConfigError } from "@/lib/moolre/config";
 import { isValidGhPhone, toLocalPhone } from "@/lib/moolre/phone";
+import { createCheckoutSession } from "@/lib/stripe/client";
+import { StripeConfigError } from "@/lib/stripe/config";
 import { createServiceRoleClient, createClient } from "@/lib/supabase/server";
 import { getProductsBySlugs } from "@/lib/catalog/queries";
 import type { PaymentMethod, PaymentStatus } from "@/types/database";
 
+import { FLAT_DELIVERY_FEE, FLAT_INTERNATIONAL_DELIVERY_FEE_USD } from "./constants";
 import { generateOrderNumber } from "./order-number";
 import { getOrderById, getOrderByNumber } from "./queries";
 import {
@@ -24,7 +29,7 @@ async function attemptMoolrePayment(
   serviceClient: ServiceClient,
   payment: { id: string; amount: number; method: PaymentMethod; payerPhone: string },
   otpcode?: string
-): Promise<{ status: PaymentStatus; providerMessage: string | null; requiresOtp: boolean }> {
+): Promise<{ status: PaymentStatus; providerMessage: string | null; requiresOtp: boolean; redirectUrl?: string }> {
   const localPayer = toLocalPhone(payment.payerPhone);
   if (!localPayer) {
     const result = { status: "failed" as PaymentStatus, providerMessage: "Invalid payer phone number.", requiresOtp: false };
@@ -81,10 +86,55 @@ async function attemptMoolrePayment(
   return { status, providerMessage, requiresOtp };
 }
 
+/** International (non-Ghana) path — creates a hosted Stripe Checkout Session and hands back its URL to redirect to. */
+async function attemptStripePayment(
+  serviceClient: ServiceClient,
+  payment: {
+    id: string;
+    orderId: string;
+    orderNumber: string;
+    amount: number;
+    currency: Currency;
+    customerEmail: string;
+  },
+  lineItems: { name: string; quantity: number; unitAmount: number }[]
+): Promise<{ status: PaymentStatus; providerMessage: string | null; requiresOtp: boolean; redirectUrl?: string }> {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+  try {
+    const session = await createCheckoutSession({
+      paymentId: payment.id,
+      orderId: payment.orderId,
+      orderNumber: payment.orderNumber,
+      currency: payment.currency,
+      lineItems,
+      customerEmail: payment.customerEmail,
+      successUrl: `${siteUrl}/checkout/confirmation/${payment.orderNumber}?session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${siteUrl}/checkout`,
+    });
+
+    await serviceClient
+      .from("payments")
+      .update({ provider: "stripe", provider_reference: session.sessionId, status: "pending" })
+      .eq("id", payment.id);
+
+    return { status: "pending", providerMessage: null, requiresOtp: false, redirectUrl: session.url };
+  } catch (err) {
+    const message =
+      err instanceof StripeConfigError ? err.message : "Payment gateway error. Please try again.";
+    await serviceClient
+      .from("payments")
+      .update({ provider: "stripe", status: "failed", provider_message: message })
+      .eq("id", payment.id);
+    return { status: "failed", providerMessage: message, requiresOtp: false };
+  }
+}
+
 export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResult> {
   const parsed = checkoutSchema.safeParse(values);
   if (!parsed.success) return { error: "Please check your details and try again." };
   const data = parsed.data;
+  const isGhana = data.currency === "GHS";
 
   const supabase = await createClient();
   const {
@@ -95,7 +145,10 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
   const products = await getProductsBySlugs(supabase, uniqueSlugs);
   const productBySlug = new Map(products.map((p) => [p.slug, p]));
 
-  const lineItems: {
+  // Everything below is computed in GHS first (the canonical currency prices
+  // and coupon thresholds are stored in) and only converted to the order's
+  // actual currency at the very end, right before it's written/charged.
+  const lineItemsGhs: {
     product_id: string;
     product_size_id: string;
     product_name: string;
@@ -115,7 +168,7 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
         error: `Only ${size?.stock ?? 0} left in size ${item.size} for ${product.name} — please update your cart.`,
       };
     }
-    lineItems.push({
+    lineItemsGhs.push({
       product_id: product.id,
       product_size_id: size.id,
       product_name: product.name,
@@ -127,10 +180,10 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
     });
   }
 
-  const subtotal = lineItems.reduce((sum, li) => sum + li.line_total, 0);
+  const subtotalGhs = lineItemsGhs.reduce((sum, li) => sum + li.line_total, 0);
   const serviceClient = createServiceRoleClient();
 
-  let discountTotal = 0;
+  let discountTotalGhs = 0;
   let couponId: string | null = null;
   if (data.couponCode) {
     const { data: coupon } = await serviceClient
@@ -147,7 +200,7 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
     if (coupon.expires_at && new Date(coupon.expires_at) < now) {
       return { error: "This coupon has expired." };
     }
-    if (subtotal < coupon.minimum_purchase) {
+    if (subtotalGhs < coupon.minimum_purchase) {
       return { error: `This coupon requires a minimum purchase of GHS ${coupon.minimum_purchase}.` };
     }
 
@@ -159,30 +212,46 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
     }
 
     couponId = coupon.id;
-    discountTotal =
+    discountTotalGhs =
       coupon.discount_type === "percentage"
-        ? Math.round(subtotal * (coupon.discount_value / 100))
-        : Math.min(coupon.discount_value, subtotal);
+        ? Math.round(subtotalGhs * (coupon.discount_value / 100))
+        : Math.min(coupon.discount_value, subtotalGhs);
   }
 
-  const { data: zone } = await serviceClient
-    .from("shipping_zones")
-    .select("id,delivery_fee")
-    .eq("id", data.shippingZoneId)
-    .eq("is_active", true)
-    .maybeSingle();
-  if (!zone) return { error: "Please select a valid delivery zone." };
+  // Rates only needed once we're converting out of GHS.
+  let rates: ExchangeRates | null = null;
+  if (!isGhana) rates = await getExchangeRates();
 
-  const total = Math.max(0, subtotal - discountTotal) + zone.delivery_fee;
+  const deliveryFeeGhs =
+    data.deliveryMethod === "pickup"
+      ? 0
+      : data.deliveryMethod === "delivery"
+        ? FLAT_DELIVERY_FEE
+        : convertBetween(FLAT_INTERNATIONAL_DELIVERY_FEE_USD, "USD", "GHS", rates!);
+
+  const subtotal = isGhana ? subtotalGhs : convert(subtotalGhs, data.currency, rates!);
+  const discountTotal = isGhana ? discountTotalGhs : convert(discountTotalGhs, data.currency, rates!);
+  const deliveryFee = isGhana ? deliveryFeeGhs : convert(deliveryFeeGhs, data.currency, rates!);
+  const total = Math.max(0, subtotal - discountTotal) + deliveryFee;
+
+  const lineItems = isGhana
+    ? lineItemsGhs
+    : lineItemsGhs.map((li) => ({
+        ...li,
+        unit_price: convert(li.unit_price, data.currency, rates!),
+        line_total: convert(li.line_total, data.currency, rates!),
+      }));
 
   let shippingAddressId: string | null = null;
   let shippingSnapshot: {
     recipient_name: string;
     phone: string;
-    region: string;
+    region: string | null;
     city: string;
     street_address: string;
     landmark: string | null;
+    country: string | null;
+    postal_code: string | null;
   };
 
   if (data.shipping.addressId) {
@@ -202,19 +271,29 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
       city: addr.city,
       street_address: addr.street_address,
       landmark: addr.landmark,
+      country: null,
+      postal_code: null,
     };
   } else {
     const s = data.shipping;
-    if (!s.recipientName || !s.phone || !s.region || !s.city || !s.streetAddress) {
+    if (!s.recipientName || !s.phone || !s.city || !s.streetAddress) {
       return { error: "Enter a complete shipping address." };
+    }
+    if (isGhana && !s.region) {
+      return { error: "Enter a region." };
+    }
+    if (!isGhana && !s.country) {
+      return { error: "Enter a country." };
     }
     shippingSnapshot = {
       recipient_name: s.recipientName,
       phone: s.phone,
-      region: s.region,
+      region: s.region ?? null,
       city: s.city,
       street_address: s.streetAddress,
       landmark: s.landmark ?? null,
+      country: s.country ?? null,
+      postal_code: s.postalCode ?? null,
     };
   }
 
@@ -231,18 +310,20 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
         customer_email: data.customerEmail,
         customer_phone: data.customerPhone,
         shipping_address_id: shippingAddressId,
-        shipping_zone_id: zone.id,
         shipping_recipient_name: shippingSnapshot.recipient_name,
         shipping_phone: shippingSnapshot.phone,
         shipping_region: shippingSnapshot.region,
         shipping_city: shippingSnapshot.city,
         shipping_street_address: shippingSnapshot.street_address,
         shipping_landmark: shippingSnapshot.landmark,
-        delivery_fee: zone.delivery_fee,
+        shipping_country: shippingSnapshot.country,
+        shipping_postal_code: shippingSnapshot.postal_code,
+        delivery_fee: deliveryFee,
         subtotal,
         discount_total: discountTotal,
         coupon_id: couponId,
         total,
+        currency: data.currency,
         notes: data.notes ?? null,
       })
       .select("id,order_number,created_at")
@@ -269,7 +350,7 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
     return { error: "Something went wrong saving your order. Please contact support." };
   }
 
-  if (user && data.shipping.saveAddress && !data.shipping.addressId) {
+  if (user && data.shipping.saveAddress && !data.shipping.addressId && isGhana) {
     const { count } = await serviceClient
       .from("addresses")
       .select("id", { count: "exact", head: true })
@@ -278,7 +359,7 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
       profile_id: user.id,
       recipient_name: shippingSnapshot.recipient_name,
       phone: shippingSnapshot.phone,
-      region: shippingSnapshot.region,
+      region: shippingSnapshot.region ?? "",
       city: shippingSnapshot.city,
       street_address: shippingSnapshot.street_address,
       landmark: shippingSnapshot.landmark,
@@ -286,13 +367,16 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
     });
   }
 
+  const paymentMethod: PaymentMethod = isGhana ? data.paymentMethod : "card";
+
   const { data: paymentRow, error: paymentError } = await serviceClient
     .from("payments")
     .insert({
       order_id: orderId,
-      method: data.paymentMethod,
+      method: paymentMethod,
       amount: total,
-      payer_phone: toLocalPhone(data.payerPhone) ?? data.payerPhone,
+      currency: data.currency,
+      payer_phone: isGhana ? (toLocalPhone(data.payerPhone ?? "") ?? data.payerPhone ?? null) : null,
       status: "initiated",
     })
     .select("id")
@@ -303,12 +387,37 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
     };
   }
 
-  const attempt = await attemptMoolrePayment(serviceClient, {
-    id: paymentRow.id,
-    amount: total,
-    method: data.paymentMethod,
-    payerPhone: data.payerPhone,
-  });
+  let attempt: { status: PaymentStatus; providerMessage: string | null; requiresOtp: boolean; redirectUrl?: string };
+
+  if (isGhana) {
+    if (!data.payerPhone) {
+      attempt = { status: "failed", providerMessage: "Enter your Mobile Money number.", requiresOtp: false };
+      await serviceClient
+        .from("payments")
+        .update({ status: attempt.status, provider_message: attempt.providerMessage })
+        .eq("id", paymentRow.id);
+    } else {
+      attempt = await attemptMoolrePayment(serviceClient, {
+        id: paymentRow.id,
+        amount: total,
+        method: paymentMethod,
+        payerPhone: data.payerPhone,
+      });
+    }
+  } else {
+    attempt = await attemptStripePayment(
+      serviceClient,
+      {
+        id: paymentRow.id,
+        orderId,
+        orderNumber,
+        amount: total,
+        currency: data.currency,
+        customerEmail: data.customerEmail,
+      },
+      lineItems.map((li) => ({ name: `${li.product_name} (${li.size})`, quantity: li.quantity, unitAmount: li.unit_price }))
+    );
+  }
 
   const order: OrderStatusPayload = {
     orderId,
@@ -318,8 +427,9 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
     customerPhone: data.customerPhone,
     subtotal,
     discountTotal,
-    deliveryFee: zone.delivery_fee,
+    deliveryFee,
     total,
+    currency: data.currency,
     createdAt,
     items: lineItems.map((li) => ({
       productName: li.product_name,
@@ -332,12 +442,12 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
     payment: {
       id: paymentRow.id,
       status: attempt.status,
-      method: data.paymentMethod,
+      method: paymentMethod,
       providerMessage: attempt.providerMessage,
     },
   };
 
-  return { success: true, order, requiresOtp: attempt.requiresOtp };
+  return { success: true, order, requiresOtp: attempt.requiresOtp, redirectUrl: attempt.redirectUrl };
 }
 
 export async function submitPaymentOtp(paymentId: string, otp: string): Promise<PlaceOrderResult> {
@@ -350,7 +460,7 @@ export async function submitPaymentOtp(paymentId: string, otp: string): Promise<
     .select("id,order_id,amount,method,payer_phone")
     .eq("id", paymentId)
     .maybeSingle();
-  if (!payment) return { error: "Payment not found." };
+  if (!payment || !payment.payer_phone) return { error: "Payment not found." };
 
   const attempt = await attemptMoolrePayment(
     serviceClient,
@@ -380,6 +490,7 @@ export async function retryPayment(paymentId: string, payerPhone?: string): Prom
     phone = payerPhone;
     await serviceClient.from("payments").update({ payer_phone: phone }).eq("id", paymentId);
   }
+  if (!phone) return { error: "Enter your Mobile Money number." };
 
   const attempt = await attemptMoolrePayment(serviceClient, {
     id: payment.id,

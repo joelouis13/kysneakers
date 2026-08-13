@@ -1,12 +1,5 @@
+import type { Currency } from "@/lib/currency/config";
 import type { OrderStatus, PaymentMethod, PaymentStatus } from "@/types/database";
-
-export type ShippingZone = {
-  id: string;
-  name: string;
-  deliveryFee: number;
-  estimatedDaysMin: number;
-  estimatedDaysMax: number;
-};
 
 export type CouponPreviewFailureReason =
   | "not_found"
@@ -54,6 +47,7 @@ export type OrderStatusPayload = {
   discountTotal: number;
   deliveryFee: number;
   total: number;
+  currency: Currency;
   createdAt: string;
   items: OrderItemSummary[];
   payment: OrderPaymentSummary | null;
@@ -61,4 +55,4 @@ export type OrderStatusPayload = {
 
 export type PlaceOrderResult =
   | { error: string }
-  | { success: true; order: OrderStatusPayload; requiresOtp: boolean };
+  | { success: true; order: OrderStatusPayload; requiresOtp: boolean; redirectUrl?: string };

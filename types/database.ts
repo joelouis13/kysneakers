@@ -37,7 +37,7 @@ export type OrderStatus =
   | "delivered"
   | "cancelled"
   | "refunded";
-export type PaymentMethod = "mtn_momo" | "telecel_cash" | "airteltigo_money";
+export type PaymentMethod = "mtn_momo" | "telecel_cash" | "airteltigo_money" | "card";
 export type PaymentStatus = "initiated" | "pending" | "successful" | "failed" | "refunded";
 export type ReviewStatus = "pending" | "approved" | "rejected";
 export type NotificationChannel = "email" | "sms" | "in_app";
@@ -271,15 +271,18 @@ export interface Database {
           shipping_zone_id: string | null;
           shipping_recipient_name: string;
           shipping_phone: string;
-          shipping_region: string;
+          shipping_region: string | null;
           shipping_city: string;
           shipping_street_address: string;
           shipping_landmark: string | null;
+          shipping_country: string | null;
+          shipping_postal_code: string | null;
           delivery_fee: number;
           subtotal: number;
           discount_total: number;
           coupon_id: string | null;
           total: number;
+          currency: string;
           notes: string | null;
           created_at: string;
           updated_at: string;
@@ -289,10 +292,14 @@ export interface Database {
         | "status"
         | "shipping_address_id"
         | "shipping_zone_id"
+        | "shipping_region"
         | "shipping_landmark"
+        | "shipping_country"
+        | "shipping_postal_code"
         | "delivery_fee"
         | "discount_total"
         | "coupon_id"
+        | "currency"
         | "notes"
         | "created_at"
         | "updated_at"
@@ -322,7 +329,7 @@ export interface Database {
           amount: number;
           currency: string;
           status: PaymentStatus;
-          payer_phone: string;
+          payer_phone: string | null;
           provider_reference: string | null;
           provider_message: string | null;
           webhook_payload: Json | null;
@@ -334,6 +341,7 @@ export interface Database {
         | "provider"
         | "currency"
         | "status"
+        | "payer_phone"
         | "provider_reference"
         | "provider_message"
         | "webhook_payload"

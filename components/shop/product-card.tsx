@@ -7,31 +7,28 @@ import { motion } from "framer-motion";
 
 import { Badge } from "@/components/ui/badge";
 import type { ProductCardData } from "@/lib/catalog/types";
+import { useCurrency } from "@/lib/currency/currency-context";
 import { cn } from "@/lib/utils";
 import { useWishlist } from "@/lib/wishlist/wishlist-context";
 
-const currency = new Intl.NumberFormat("en-GH", {
-  style: "currency",
-  currency: "GHS",
-  maximumFractionDigits: 0,
-});
-
 function PriceDisplay({ product }: { product: ProductCardData }) {
+  const { formatFromGhs } = useCurrency();
+
   if (product.salePrice) {
     return (
       <div className="flex items-center gap-2">
         <span className="text-sm font-semibold text-secondary">
-          {currency.format(product.salePrice)}
+          {formatFromGhs(product.salePrice)}
         </span>
         <span className="text-xs text-muted-foreground line-through">
-          {currency.format(product.regularPrice)}
+          {formatFromGhs(product.regularPrice)}
         </span>
       </div>
     );
   }
   return (
     <span className="text-sm font-semibold text-foreground">
-      {currency.format(product.regularPrice)}
+      {formatFromGhs(product.regularPrice)}
     </span>
   );
 }

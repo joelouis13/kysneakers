@@ -2,12 +2,7 @@ import Link from "next/link";
 
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import type { AdminOrderListItem } from "@/lib/admin/orders/types";
-
-const currency = new Intl.NumberFormat("en-GH", {
-  style: "currency",
-  currency: "GHS",
-  maximumFractionDigits: 0,
-});
+import { formatCurrency } from "@/lib/currency/format";
 
 export function OrderList({ orders }: { orders: AdminOrderListItem[] }) {
   if (orders.length === 0) {
@@ -40,7 +35,9 @@ export function OrderList({ orders }: { orders: AdminOrderListItem[] }) {
                 day: "numeric",
               })}
             </span>
-            <span className="text-sm font-medium text-foreground">{currency.format(order.total)}</span>
+            <span className="text-sm font-medium text-foreground">
+              {formatCurrency(order.total, order.currency)}
+            </span>
             <OrderStatusBadge status={order.status} />
           </div>
         </Link>

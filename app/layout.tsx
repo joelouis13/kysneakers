@@ -8,6 +8,10 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth/auth-context";
+import { getCurrencyForCountry } from "@/lib/currency/config";
+import { CurrencyProvider } from "@/lib/currency/currency-context";
+import { detectCountry } from "@/lib/currency/detect";
+import { getExchangeRates } from "@/lib/currency/rates";
 import { createClient } from "@/lib/supabase/server";
 
 const inter = Inter({
@@ -38,6 +42,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   } = await supabase.auth.getUser();
   const isStaff = user ? (await supabase.rpc("is_staff")).data ?? false : false;
 
+  const country = await detectCountry();
+  const currency = getCurrencyForCountry(country);
+  const rates = await getExchangeRates();
+
   return (
     <html
       lang="en"
@@ -49,10 +57,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <TooltipProvider>
             <QueryProvider>
-              <AuthProvider initialUser={user} initialIsStaff={isStaff}>
-                {children}
-                <Toaster />
-              </AuthProvider>
+              <CurrencyProvider currency={currency} rates={rates}>
+                <AuthProvider initialUser={user} initialIsStaff={isStaff}>
+                  {children}
+                  <Toaster />
+                </AuthProvider>
+              </CurrencyProvider>
             </QueryProvider>
           </TooltipProvider>
         </ThemeProvider>

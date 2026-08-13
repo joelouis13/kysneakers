@@ -1,19 +1,28 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { Currency } from "@/lib/currency/config";
+import { convertBetween, getExchangeRates } from "@/lib/currency/rates";
 import type { Database, OrderStatus } from "@/types/database";
 
 type Client = SupabaseClient<Database>;
 
 export type RevenueStats = { total: number; today: number; thisMonth: number };
 
-/** Revenue = orders not pending payment, cancelled, or refunded — money actually collected and kept. */
+/**
+ * Revenue = orders not pending payment, cancelled, or refunded — money
+ * actually collected and kept. Orders can be in GHS, USD, EUR, or GBP
+ * (Stripe international orders) — every amount is converted to GHS before
+ * summing, since naively adding raw totals across currencies would produce
+ * a meaningless number.
+ */
 export async function getRevenueStats(supabase: Client): Promise<RevenueStats> {
   const { data, error } = await supabase
     .from("orders")
-    .select("total,created_at")
+    .select("total,currency,created_at")
     .not("status", "in", "(pending_payment,cancelled,refunded)");
   if (error) throw error;
 
+  const rates = await getExchangeRates();
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -22,10 +31,11 @@ export async function getRevenueStats(supabase: Client): Promise<RevenueStats> {
   let today = 0;
   let thisMonth = 0;
   for (const row of data ?? []) {
-    total += row.total;
+    const amountGhs = convertBetween(row.total, row.currency as Currency, "GHS", rates);
+    total += amountGhs;
     const createdAt = new Date(row.created_at);
-    if (createdAt >= startOfMonth) thisMonth += row.total;
-    if (createdAt >= startOfToday) today += row.total;
+    if (createdAt >= startOfMonth) thisMonth += amountGhs;
+    if (createdAt >= startOfToday) today += amountGhs;
   }
   return { total, today, thisMonth };
 }
@@ -118,6 +128,7 @@ export type RecentOrder = {
   orderNumber: string;
   customerName: string;
   total: number;
+  currency: Currency;
   status: OrderStatus;
   createdAt: string;
 };
@@ -125,13 +136,14 @@ export type RecentOrder = {
 export async function getRecentOrders(supabase: Client, limit = 8): Promise<RecentOrder[]> {
   const { data, error } = await supabase
     .from("orders")
-    .select("order_number,customer_name,total,status,created_at")
+    .select("order_number,customer_name,total,currency,status,created_at")
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
 
   return (data ?? []).map((r) => ({
     orderNumber: r.order_number,
+    currency: r.currency as Currency,
     customerName: r.customer_name,
     total: r.total,
     status: r.status,

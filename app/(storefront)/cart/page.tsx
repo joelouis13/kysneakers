@@ -2,23 +2,25 @@
 
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CartItemRow } from "@/components/cart/cart-item-row";
 import { CouponForm } from "@/components/cart/coupon-form";
-import { DeliveryZoneSelect } from "@/components/cart/delivery-zone-select";
 import { OrderSummary } from "@/components/cart/order-summary";
+import { DeliveryMethodSelect, type DeliveryMethod } from "@/components/checkout/delivery-method-select";
 import { useProductsBySlugs } from "@/lib/catalog/hooks";
 import type { ProductDetail } from "@/lib/catalog/types";
 import { useCart } from "@/lib/cart/cart-context";
-import { useCouponPreview, useShippingZones } from "@/lib/checkout/hooks";
+import { FLAT_DELIVERY_FEE } from "@/lib/checkout/constants";
+import { useCouponPreview } from "@/lib/checkout/hooks";
 
 export default function CartPage() {
+  const router = useRouter();
   const { items, activeItems, savedItems, couponCode } = useCart();
-  const { data: zones } = useShippingZones();
-  const [zoneId, setZoneId] = useState<string | null>(null);
+  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("delivery");
 
   const slugs = useMemo(() => [...new Set(items.map((i) => i.productSlug))], [items]);
   const { data: products, isLoading } = useProductsBySlugs(slugs);
@@ -36,12 +38,10 @@ export default function CartPage() {
     }, 0);
   }, [activeItems, productBySlug]);
 
-  const effectiveZoneId = zoneId ?? zones?.[0]?.id ?? null;
-  const selectedZone = zones?.find((z) => z.id === effectiveZoneId);
-
   const { data: couponPreview } = useCouponPreview(couponCode ?? "", subtotal);
   const discount = couponPreview?.valid ? couponPreview.discount : 0;
-  const deliveryFee = activeItems.length > 0 ? (selectedZone?.deliveryFee ?? 0) : 0;
+  const deliveryFee =
+    activeItems.length > 0 && deliveryMethod === "delivery" ? FLAT_DELIVERY_FEE : 0;
   const total = Math.max(0, subtotal - discount) + deliveryFee;
   const itemCount = activeItems.reduce((sum, i) => sum + i.quantity, 0);
 
@@ -125,7 +125,8 @@ export default function CartPage() {
           </div>
 
           <div className="rounded-xl border border-border p-6">
-            <DeliveryZoneSelect zones={zones ?? []} value={effectiveZoneId} onChange={setZoneId} />
+            <h2 className="mb-3 text-sm font-semibold text-foreground">Delivery Method</h2>
+            <DeliveryMethodSelect value={deliveryMethod} onChange={setDeliveryMethod} />
           </div>
 
           <OrderSummary
@@ -134,6 +135,11 @@ export default function CartPage() {
             deliveryFee={deliveryFee}
             total={total}
             itemCount={itemCount}
+            actionSlot={
+              <Button size="lg" variant="secondary" className="w-full" onClick={() => router.push("/checkout")}>
+                Proceed to Checkout
+              </Button>
+            }
           />
         </div>
       </div>

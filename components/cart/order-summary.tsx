@@ -1,15 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
 
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-
-const currency = new Intl.NumberFormat("en-GH", {
-  style: "currency",
-  currency: "GHS",
-  maximumFractionDigits: 0,
-});
+import { useCurrency } from "@/lib/currency/currency-context";
 
 export function OrderSummary({
   subtotal,
@@ -17,14 +11,16 @@ export function OrderSummary({
   deliveryFee,
   total,
   itemCount,
+  actionSlot,
 }: {
   subtotal: number;
   discount: number;
   deliveryFee: number;
   total: number;
   itemCount: number;
+  actionSlot?: ReactNode;
 }) {
-  const router = useRouter();
+  const { formatFromGhs } = useCurrency();
 
   return (
     <div className="rounded-xl border border-border p-6">
@@ -33,17 +29,17 @@ export function OrderSummary({
       <div className="mt-4 space-y-2 text-sm">
         <div className="flex justify-between text-muted-foreground">
           <span>Subtotal ({itemCount} {itemCount === 1 ? "item" : "items"})</span>
-          <span className="text-foreground">{currency.format(subtotal)}</span>
+          <span className="text-foreground">{formatFromGhs(subtotal)}</span>
         </div>
         {discount > 0 && (
           <div className="flex justify-between text-muted-foreground">
             <span>Discount</span>
-            <span className="text-secondary">-{currency.format(discount)}</span>
+            <span className="text-secondary">-{formatFromGhs(discount)}</span>
           </div>
         )}
         <div className="flex justify-between text-muted-foreground">
           <span>Delivery Fee</span>
-          <span className="text-foreground">{currency.format(deliveryFee)}</span>
+          <span className="text-foreground">{formatFromGhs(deliveryFee)}</span>
         </div>
       </div>
 
@@ -51,17 +47,10 @@ export function OrderSummary({
 
       <div className="flex justify-between text-base font-semibold text-foreground">
         <span>Total</span>
-        <span>{currency.format(total)}</span>
+        <span>{formatFromGhs(total)}</span>
       </div>
 
-      <Button
-        size="lg"
-        variant="secondary"
-        className="mt-6 w-full"
-        onClick={() => router.push("/checkout")}
-      >
-        Proceed to Checkout
-      </Button>
+      {actionSlot && <div className="mt-6">{actionSlot}</div>}
     </div>
   );
 }

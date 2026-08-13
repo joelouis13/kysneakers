@@ -12,18 +12,13 @@ import {
   getRecentOrders,
   getRevenueStats,
 } from "@/lib/admin/reports/queries";
+import { formatCurrency } from "@/lib/currency/format";
 import { createClient } from "@/lib/supabase/server";
 import type { OrderStatus } from "@/types/database";
 
 export const metadata: Metadata = {
   title: "Admin Dashboard",
 };
-
-const currency = new Intl.NumberFormat("en-GH", {
-  style: "currency",
-  currency: "GHS",
-  maximumFractionDigits: 0,
-});
 
 const IN_FLIGHT_STATUSES: OrderStatus[] = [
   "pending_payment",
@@ -54,11 +49,11 @@ export default async function AdminDashboardPage() {
       <h1 className="mb-6 font-heading text-3xl tracking-wide text-foreground">Dashboard</h1>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        <StatTile label="Total Revenue" value={currency.format(revenue.total)} icon={Wallet} />
+        <StatTile label="Total Revenue" value={formatCurrency(revenue.total, "GHS")} icon={Wallet} />
         <StatTile
           label="This Month"
-          value={currency.format(revenue.thisMonth)}
-          sublabel={`Today: ${currency.format(revenue.today)}`}
+          value={formatCurrency(revenue.thisMonth, "GHS")}
+          sublabel={`Today: ${formatCurrency(revenue.today, "GHS")}`}
           icon={Wallet}
         />
         <StatTile label="Pending Orders" value={String(pendingCount)} icon={Clock} />
@@ -100,7 +95,7 @@ export default async function AdminDashboardPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-medium text-foreground">
-                    {currency.format(order.total)}
+                    {formatCurrency(order.total, order.currency)}
                   </span>
                   <OrderStatusBadge status={order.status} />
                 </div>

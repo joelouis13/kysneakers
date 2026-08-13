@@ -23,12 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { restoreProduct, softDeleteProduct } from "@/lib/admin/products/actions";
 import type { AdminProductListItem } from "@/lib/admin/products/types";
-
-const currency = new Intl.NumberFormat("en-GH", {
-  style: "currency",
-  currency: "GHS",
-  maximumFractionDigits: 0,
-});
+import { formatCurrency } from "@/lib/currency/format";
 
 type ConfirmTarget = { id: string; slug: string; name: string; action: "delete" | "restore" };
 
@@ -86,7 +81,7 @@ export function ProductList({ products }: { products: AdminProductListItem[] }) 
 
             <div className="flex shrink-0 items-center gap-4">
               <span className="text-sm font-medium text-foreground">
-                {currency.format(product.salePrice ?? product.regularPrice)}
+                {formatCurrency(product.salePrice ?? product.regularPrice, "GHS")}
               </span>
               <span className="text-xs text-muted-foreground">{product.totalStock} in stock</span>
               <Badge variant={product.status === "active" ? "secondary" : "destructive"}>

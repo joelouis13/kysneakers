@@ -8,18 +8,13 @@ import {
   getOrderStatusCounts,
   getRevenueStats,
 } from "@/lib/admin/reports/queries";
+import { formatCurrency } from "@/lib/currency/format";
 import { createClient } from "@/lib/supabase/server";
 import type { OrderStatus } from "@/types/database";
 
 export const metadata: Metadata = {
   title: "Reports",
 };
-
-const currency = new Intl.NumberFormat("en-GH", {
-  style: "currency",
-  currency: "GHS",
-  maximumFractionDigits: 0,
-});
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   pending_payment: "Pending Payment",
@@ -47,9 +42,9 @@ export default async function AdminReportsPage() {
       <h1 className="mb-6 font-heading text-3xl tracking-wide text-foreground">Reports</h1>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatTile label="Today's Revenue" value={currency.format(revenue.today)} icon={Wallet} />
-        <StatTile label="This Month's Revenue" value={currency.format(revenue.thisMonth)} icon={Wallet} />
-        <StatTile label="All-Time Revenue" value={currency.format(revenue.total)} icon={Wallet} />
+        <StatTile label="Today's Revenue" value={formatCurrency(revenue.today, "GHS")} icon={Wallet} />
+        <StatTile label="This Month's Revenue" value={formatCurrency(revenue.thisMonth, "GHS")} icon={Wallet} />
+        <StatTile label="All-Time Revenue" value={formatCurrency(revenue.total, "GHS")} icon={Wallet} />
       </div>
 
       <div className="mt-8">
