@@ -57,14 +57,18 @@ async function attemptMoolrePayment(
       ...(otpcode ? { otpcode } : {}),
     });
 
-    if ("data" in response) {
-      status = "pending";
-      providerReference = response.data;
-      providerMessage = "TR099";
-    } else if (response.code === "TP14") {
+    if (response.code === "TP14") {
+      // OTP-required responses also carry a "data" field, but it's always
+      // the literal placeholder "all" — not a transaction id — so this check
+      // must come before the "data" in response check below, or every
+      // OTP-required payment gets misread as a successful push initiation.
       status = "pending";
       providerMessage = "TP14";
       requiresOtp = true;
+    } else if ("data" in response) {
+      status = "pending";
+      providerReference = response.data;
+      providerMessage = "TR099";
     } else {
       status = "failed";
       providerMessage = response.message ?? response.code;
