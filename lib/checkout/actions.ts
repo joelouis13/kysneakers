@@ -2,6 +2,7 @@
 
 import type { Currency } from "@/lib/currency/config";
 import { detectCountry } from "@/lib/currency/detect";
+import { resolveProductPrice } from "@/lib/currency/product-price";
 import { convert, convertBetween, getExchangeRates, type ExchangeRates } from "@/lib/currency/rates";
 import { getVatRate, vatPortionOfInclusiveAmount } from "@/lib/currency/vat";
 import { channelForMethod, initiatePayment } from "@/lib/moolre/client";
@@ -147,9 +148,12 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
   const products = await getProductsBySlugs(supabase, uniqueSlugs);
   const productBySlug = new Map(products.map((p) => [p.slug, p]));
 
-  // Everything below is computed in GHS first (the canonical currency prices
-  // and coupon thresholds are stored in) and only converted to the order's
-  // actual currency at the very end, right before it's written/charged.
+  // Stock checks, and coupon minimum-purchase/discount math, stay GHS-based
+  // (the canonical prices and coupon thresholds are stored in) — but the
+  // actual charged line items are resolved directly in the order's currency
+  // below, per line, since an admin-set EUR price generally isn't a simple
+  // multiple of the GHS price and can't be derived by bulk-converting a GHS
+  // subtotal after the fact.
   const lineItemsGhs: {
     product_id: string;
     product_size_id: string;
@@ -231,7 +235,17 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
         ? FLAT_DELIVERY_FEE
         : convertBetween(FLAT_INTERNATIONAL_DELIVERY_FEE_USD, "USD", "GHS", rates!);
 
-  const subtotal = isGhana ? subtotalGhs : convert(subtotalGhs, data.currency, rates!);
+  // Per-line currency resolution: admin-set EUR price wins when the order is
+  // EUR and one exists on the product; otherwise falls back to live FX
+  // conversion from GHS. Same function checkout-form.tsx's live preview uses,
+  // so what the customer saw and what actually gets charged can't drift.
+  const lineItems = data.items.map((item, i) => {
+    const product = productBySlug.get(item.productSlug)!;
+    const unitPrice = resolveProductPrice(product.effectivePrice, product.eurEffectivePrice, data.currency, rates!);
+    return { ...lineItemsGhs[i], unit_price: unitPrice, line_total: unitPrice * item.quantity };
+  });
+
+  const subtotal = lineItems.reduce((sum, li) => sum + li.line_total, 0);
   const discountTotal = isGhana ? discountTotalGhs : convert(discountTotalGhs, data.currency, rates!);
   const deliveryFee = isGhana ? deliveryFeeGhs : convert(deliveryFeeGhs, data.currency, rates!);
   const total = Math.max(0, subtotal - discountTotal) + deliveryFee;
@@ -244,14 +258,6 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
   // only extracts the portion already in it — it never changes the total.
   const vatRate = getVatRate(await detectCountry());
   const vatAmount = vatPortionOfInclusiveAmount(total, vatRate);
-
-  const lineItems = isGhana
-    ? lineItemsGhs
-    : lineItemsGhs.map((li) => ({
-        ...li,
-        unit_price: convert(li.unit_price, data.currency, rates!),
-        line_total: convert(li.line_total, data.currency, rates!),
-      }));
 
   let shippingAddressId: string | null = null;
   let shippingSnapshot: {

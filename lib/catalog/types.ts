@@ -12,6 +12,10 @@ export type ProductCardData = {
   regularPrice: number;
   salePrice: number | null;
   effectivePrice: number;
+  /** Admin-set EUR overrides — null means "auto-convert from GHS at the live rate" (lib/currency's formatPrice handles the fallback). */
+  eurRegularPrice: number | null;
+  eurSalePrice: number | null;
+  eurEffectivePrice: number | null;
   isFeatured: boolean;
   isNewArrival: boolean;
   isOnSale: boolean;

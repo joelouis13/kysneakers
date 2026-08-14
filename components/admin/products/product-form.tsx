@@ -32,6 +32,8 @@ function defaultValuesFor(product?: AdminProductDetail): ProductFormValues {
       regularPrice: 0,
       isOnSale: false,
       salePrice: undefined,
+      eurRegularPrice: undefined,
+      eurSalePrice: undefined,
       weightGrams: undefined,
       tags: "",
       isFeatured: false,
@@ -52,6 +54,8 @@ function defaultValuesFor(product?: AdminProductDetail): ProductFormValues {
     regularPrice: product.regularPrice,
     isOnSale: product.isOnSale,
     salePrice: product.salePrice ?? undefined,
+    eurRegularPrice: product.eurRegularPrice ?? undefined,
+    eurSalePrice: product.eurSalePrice ?? undefined,
     weightGrams: product.weightGrams ?? undefined,
     tags: product.tags.join(", "),
     isFeatured: product.isFeatured,
@@ -215,6 +219,22 @@ export function ProductForm({
             <Label className="mb-1.5">Weight (grams, optional)</Label>
             <Input type="number" step="1" {...register("weightGrams", { valueAsNumber: true })} />
           </div>
+          <div>
+            <Label className="mb-1.5">Regular Price (EUR, optional)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              aria-invalid={!!errors.eurRegularPrice}
+              {...register("eurRegularPrice", { valueAsNumber: true })}
+            />
+            {errors.eurRegularPrice ? (
+              <p className="mt-1.5 text-xs text-destructive">{errors.eurRegularPrice.message}</p>
+            ) : (
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Leave blank to auto-convert from GHS at the current exchange rate.
+              </p>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <Checkbox
               id="isOnSale"
@@ -226,18 +246,36 @@ export function ProductForm({
             </Label>
           </div>
           {isOnSale && (
-            <div>
-              <Label className="mb-1.5">Sale Price (GHS)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                aria-invalid={!!errors.salePrice}
-                {...register("salePrice", { valueAsNumber: true })}
-              />
-              {errors.salePrice && (
-                <p className="mt-1.5 text-xs text-destructive">{errors.salePrice.message}</p>
-              )}
-            </div>
+            <>
+              <div>
+                <Label className="mb-1.5">Sale Price (GHS)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  aria-invalid={!!errors.salePrice}
+                  {...register("salePrice", { valueAsNumber: true })}
+                />
+                {errors.salePrice && (
+                  <p className="mt-1.5 text-xs text-destructive">{errors.salePrice.message}</p>
+                )}
+              </div>
+              <div>
+                <Label className="mb-1.5">Sale Price (EUR, optional)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  aria-invalid={!!errors.eurSalePrice}
+                  {...register("eurSalePrice", { valueAsNumber: true })}
+                />
+                {errors.eurSalePrice ? (
+                  <p className="mt-1.5 text-xs text-destructive">{errors.eurSalePrice.message}</p>
+                ) : (
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    Leave blank to auto-convert from GHS at the current exchange rate.
+                  </p>
+                )}
+              </div>
+            </>
           )}
         </div>
       </section>

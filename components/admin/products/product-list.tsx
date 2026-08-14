@@ -82,6 +82,11 @@ export function ProductList({ products }: { products: AdminProductListItem[] }) 
             <div className="flex shrink-0 items-center gap-4">
               <span className="text-sm font-medium text-foreground">
                 {formatCurrency(product.salePrice ?? product.regularPrice, "GHS")}
+                {(product.eurSalePrice ?? product.eurRegularPrice) != null && (
+                  <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                    / {formatCurrency(product.eurSalePrice ?? product.eurRegularPrice!, "EUR")}
+                  </span>
+                )}
               </span>
               <span className="text-xs text-muted-foreground">{product.totalStock} in stock</span>
               <Badge variant={product.status === "active" ? "secondary" : "destructive"}>

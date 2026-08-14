@@ -6,6 +6,13 @@ import { Separator } from "@/components/ui/separator";
 import { useCurrency } from "@/lib/currency/currency-context";
 import { formatCurrency } from "@/lib/currency/format";
 
+/**
+ * All amount props are already resolved into the visitor's display currency
+ * by the caller (via lib/currency/product-price.ts's resolveProductPrice
+ * per line item) — this component only formats, it never converts. That
+ * split matters once individual products carry a manual EUR price: a bulk
+ * GHS-then-convert here would silently ignore those overrides.
+ */
 export function OrderSummary({
   subtotal,
   discount,
@@ -21,8 +28,8 @@ export function OrderSummary({
   itemCount: number;
   actionSlot?: ReactNode;
 }) {
-  const { currency, vatRate, formatFromGhs, convertFromGhs, vatPortion } = useCurrency();
-  const vatAmount = vatRate > 0 ? vatPortion(convertFromGhs(total)) : 0;
+  const { currency, vatRate, vatPortion } = useCurrency();
+  const vatAmount = vatRate > 0 ? vatPortion(total) : 0;
 
   return (
     <div className="rounded-xl border border-border p-6">
@@ -31,17 +38,17 @@ export function OrderSummary({
       <div className="mt-4 space-y-2 text-sm">
         <div className="flex justify-between text-muted-foreground">
           <span>Subtotal ({itemCount} {itemCount === 1 ? "item" : "items"})</span>
-          <span className="text-foreground">{formatFromGhs(subtotal)}</span>
+          <span className="text-foreground">{formatCurrency(subtotal, currency)}</span>
         </div>
         {discount > 0 && (
           <div className="flex justify-between text-muted-foreground">
             <span>Discount</span>
-            <span className="text-secondary">-{formatFromGhs(discount)}</span>
+            <span className="text-secondary">-{formatCurrency(discount, currency)}</span>
           </div>
         )}
         <div className="flex justify-between text-muted-foreground">
           <span>Delivery Fee</span>
-          <span className="text-foreground">{formatFromGhs(deliveryFee)}</span>
+          <span className="text-foreground">{formatCurrency(deliveryFee, currency)}</span>
         </div>
       </div>
 
@@ -49,7 +56,7 @@ export function OrderSummary({
 
       <div className="flex justify-between text-base font-semibold text-foreground">
         <span>Total</span>
-        <span>{formatFromGhs(total)}</span>
+        <span>{formatCurrency(total, currency)}</span>
       </div>
 
       {vatRate > 0 && (

@@ -22,6 +22,9 @@ export const productFormSchema = z
     regularPrice: z.number().positive("Enter a price greater than 0"),
     isOnSale: z.boolean(),
     salePrice: z.number().positive().optional(),
+    /** Optional — leaving blank means "auto-convert from GHS at the live rate" on the storefront. */
+    eurRegularPrice: z.number().positive("Enter a price greater than 0").optional(),
+    eurSalePrice: z.number().positive().optional(),
     weightGrams: z.number().int().positive().optional(),
     /** Raw comma-separated input — split into an array right before insert. */
     tags: z.string().optional(),
@@ -39,7 +42,18 @@ export const productFormSchema = z
   .refine((v) => !v.isOnSale || v.salePrice === undefined || v.salePrice < v.regularPrice, {
     message: "Sale price must be less than the regular price",
     path: ["salePrice"],
-  });
+  })
+  .refine(
+    (v) =>
+      !v.isOnSale ||
+      v.eurSalePrice === undefined ||
+      v.eurRegularPrice === undefined ||
+      v.eurSalePrice < v.eurRegularPrice,
+    {
+      message: "EUR sale price must be less than the EUR regular price",
+      path: ["eurSalePrice"],
+    }
+  );
 
 export type ProductFormValues = z.infer<typeof productFormSchema>;
 

@@ -8,6 +8,8 @@ export type AdminProductListItem = {
   status: ProductStatus;
   regularPrice: number;
   salePrice: number | null;
+  eurRegularPrice: number | null;
+  eurSalePrice: number | null;
   isFeatured: boolean;
   isNewArrival: boolean;
   isOnSale: boolean;
@@ -48,6 +50,8 @@ export type AdminProductDetail = {
   categoryId: string | null;
   regularPrice: number;
   salePrice: number | null;
+  eurRegularPrice: number | null;
+  eurSalePrice: number | null;
   weightGrams: number | null;
   tags: string[];
   isFeatured: boolean;

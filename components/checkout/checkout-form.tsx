@@ -29,7 +29,8 @@ import { checkoutSchema, type CheckoutValues } from "@/lib/checkout/schemas";
 import { useCouponPreview } from "@/lib/checkout/hooks";
 import { setStashedContact } from "@/lib/checkout/session-contact";
 import { useCurrency } from "@/lib/currency/currency-context";
-import { convertBetween } from "@/lib/currency/rates";
+import { resolveProductPrice } from "@/lib/currency/product-price";
+import { convert, convertBetween } from "@/lib/currency/rates";
 import { createClient } from "@/lib/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
@@ -59,7 +60,7 @@ function useOwnAddresses() {
 export function CheckoutForm() {
   const router = useRouter();
   const { user } = useAuth();
-  const { currency, isGhana, rates, formatFromGhs, formatFromUsd } = useCurrency();
+  const { currency, isGhana, rates, formatPrice, formatFromUsd } = useCurrency();
   const { activeItems, couponCode } = useCart();
   const { data: addresses } = useOwnAddresses();
 
@@ -72,15 +73,29 @@ export function CheckoutForm() {
     return map;
   }, [products]);
 
-  const subtotal = useMemo(() => {
+  // GHS basis — coupon minimum-purchase/discount_value are GHS-denominated.
+  const subtotalGhs = useMemo(() => {
     return activeItems.reduce((sum, item) => {
       const product = productBySlug.get(item.productSlug);
       return product ? sum + product.effectivePrice * item.quantity : sum;
     }, 0);
   }, [activeItems, productBySlug]);
 
-  const { data: couponPreview } = useCouponPreview(couponCode ?? "", subtotal);
-  const discount = couponPreview?.valid ? couponPreview.discount : 0;
+  // Display/charge basis — per-line resolved to the order's currency,
+  // honoring each product's manual EUR price when set (same function
+  // placeOrder uses server-side, so preview and real charge can't drift).
+  const subtotal = useMemo(() => {
+    return activeItems.reduce((sum, item) => {
+      const product = productBySlug.get(item.productSlug);
+      if (!product) return sum;
+      const unitPrice = resolveProductPrice(product.effectivePrice, product.eurEffectivePrice, currency, rates);
+      return sum + unitPrice * item.quantity;
+    }, 0);
+  }, [activeItems, productBySlug, currency, rates]);
+
+  const { data: couponPreview } = useCouponPreview(couponCode ?? "", subtotalGhs);
+  const discountGhs = couponPreview?.valid ? couponPreview.discount : 0;
+  const discount = isGhana ? discountGhs : convert(discountGhs, currency, rates);
 
   // null = user hasn't manually chosen yet, so fall back to the first saved
   // address once it loads (derived each render, no effect needed).
@@ -134,7 +149,7 @@ export function CheckoutForm() {
     deliveryMethod === "delivery"
       ? FLAT_DELIVERY_FEE
       : deliveryMethod === "international"
-        ? convertBetween(FLAT_INTERNATIONAL_DELIVERY_FEE_USD, "USD", "GHS", rates)
+        ? convertBetween(FLAT_INTERNATIONAL_DELIVERY_FEE_USD, "USD", currency, rates)
         : 0;
   const total = Math.max(0, subtotal - discount) + deliveryFee;
   const itemCount = activeItems.reduce((sum, i) => sum + i.quantity, 0);
@@ -226,7 +241,10 @@ export function CheckoutForm() {
                 {product.name} · {item.size} × {item.quantity}
               </span>
               <span className="text-foreground">
-                {formatFromGhs(product.effectivePrice * item.quantity)}
+                {formatPrice(
+                  product.effectivePrice * item.quantity,
+                  product.eurEffectivePrice != null ? product.eurEffectivePrice * item.quantity : null
+                )}
               </span>
             </div>
           );

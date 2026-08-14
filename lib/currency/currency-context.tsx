@@ -21,6 +21,13 @@ type CurrencyContextValue = {
   formatFromUsd: (amountInUsd: number) => string;
   /** VAT already included in `grossAmount` (display currency), for the "Includes VAT: X" breakdown line — doesn't change the total. */
   vatPortion: (grossAmount: number) => number;
+  /**
+   * Product-price display: uses the admin-set EUR price directly (no FX
+   * conversion) when the visitor is in EUR and one is set; otherwise falls
+   * back to formatFromGhs. Generic over any ghs/eur pair (regular, sale,
+   * effective), not product-shaped, so it works for whichever price field.
+   */
+  formatPrice: (ghsAmount: number, eurAmount: number | null) => string;
 };
 
 const CurrencyContext = createContext<CurrencyContextValue | null>(null);
@@ -47,6 +54,10 @@ export function CurrencyProvider({
       formatFromUsd: (amountInUsd: number) =>
         formatCurrency(convertBetween(amountInUsd, "USD", currency, rates), currency),
       vatPortion: (grossAmount: number) => vatPortionOfInclusiveAmount(grossAmount, vatRate),
+      formatPrice: (ghsAmount: number, eurAmount: number | null) =>
+        currency === "EUR" && eurAmount != null
+          ? formatCurrency(eurAmount, "EUR")
+          : formatCurrency(convert(ghsAmount, currency, rates), currency),
     }),
     [currency, rates, vatRate]
   );

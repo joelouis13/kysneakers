@@ -18,7 +18,7 @@ export function CartItemRow({
   product: ProductDetail | undefined;
 }) {
   const { updateQuantity, removeItem, toggleSavedForLater } = useCart();
-  const { formatFromGhs } = useCurrency();
+  const { formatPrice } = useCurrency();
 
   if (!product) {
     return <Skeleton className="h-24 w-full" />;
@@ -27,6 +27,7 @@ export function CartItemRow({
   const size = product.sizes.find((s) => s.size === item.size);
   const stock = size?.stock ?? 0;
   const price = product.effectivePrice;
+  const eurPrice = product.eurEffectivePrice;
 
   return (
     <div className="flex gap-4 border-b border-border py-5 first:pt-0 last:border-b-0">
@@ -104,7 +105,7 @@ export function CartItemRow({
           </div>
 
           <span className="text-sm font-semibold text-foreground">
-            {formatFromGhs(price * item.quantity)}
+            {formatPrice(price * item.quantity, eurPrice != null ? eurPrice * item.quantity : null)}
           </span>
         </div>
       </div>

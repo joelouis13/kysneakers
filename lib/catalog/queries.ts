@@ -30,6 +30,9 @@ function mapSummaryRow(row: SearchProductsRow): ProductSummary {
     regularPrice: row.regular_price,
     salePrice: row.sale_price,
     effectivePrice: row.effective_price,
+    eurRegularPrice: row.eur_regular_price,
+    eurSalePrice: row.eur_sale_price,
+    eurEffectivePrice: row.eur_effective_price,
     isFeatured: row.is_featured,
     isNewArrival: row.is_new_arrival,
     isOnSale: row.is_on_sale,
@@ -233,7 +236,7 @@ export async function getCatalogFacets(supabase: Client): Promise<CatalogFacets>
 
 const PRODUCT_DETAIL_SELECT = `
   id, sku, name, slug, description, tags,
-  regular_price, sale_price, is_featured, is_new_arrival, is_on_sale,
+  regular_price, sale_price, eur_regular_price, eur_sale_price, is_featured, is_new_arrival, is_on_sale,
   brand:brands ( id, name, slug ),
   category:categories ( id, name, slug ),
   images:product_images ( id, url, display_order, is_featured ),
@@ -249,6 +252,8 @@ type ProductDetailRow = {
   tags: string[];
   regular_price: number;
   sale_price: number | null;
+  eur_regular_price: number | null;
+  eur_sale_price: number | null;
   is_featured: boolean;
   is_new_arrival: boolean;
   is_on_sale: boolean;
@@ -305,6 +310,9 @@ function mapDetailRow(
     regularPrice: row.regular_price,
     salePrice: row.sale_price,
     effectivePrice: row.sale_price ?? row.regular_price,
+    eurRegularPrice: row.eur_regular_price,
+    eurSalePrice: row.eur_sale_price,
+    eurEffectivePrice: row.eur_sale_price ?? row.eur_regular_price,
     isFeatured: row.is_featured,
     isNewArrival: row.is_new_arrival,
     isOnSale: row.is_on_sale,

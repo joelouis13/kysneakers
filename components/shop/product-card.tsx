@@ -12,23 +12,23 @@ import { cn } from "@/lib/utils";
 import { useWishlist } from "@/lib/wishlist/wishlist-context";
 
 function PriceDisplay({ product }: { product: ProductCardData }) {
-  const { formatFromGhs } = useCurrency();
+  const { formatPrice } = useCurrency();
 
   if (product.salePrice) {
     return (
       <div className="flex items-center gap-2">
         <span className="text-sm font-semibold text-secondary">
-          {formatFromGhs(product.salePrice)}
+          {formatPrice(product.salePrice, product.eurSalePrice)}
         </span>
         <span className="text-xs text-muted-foreground line-through">
-          {formatFromGhs(product.regularPrice)}
+          {formatPrice(product.regularPrice, product.eurRegularPrice)}
         </span>
       </div>
     );
   }
   return (
     <span className="text-sm font-semibold text-foreground">
-      {formatFromGhs(product.regularPrice)}
+      {formatPrice(product.regularPrice, product.eurRegularPrice)}
     </span>
   );
 }

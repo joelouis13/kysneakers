@@ -87,7 +87,12 @@ export default async function ProductPage({
           </h1>
 
           <div className="mt-3 flex items-center gap-3">
-            <ProductPrice regularPrice={product.regularPrice} salePrice={product.salePrice} />
+            <ProductPrice
+              regularPrice={product.regularPrice}
+              salePrice={product.salePrice}
+              eurRegularPrice={product.eurRegularPrice}
+              eurSalePrice={product.eurSalePrice}
+            />
           </div>
 
           <p className={cn("mt-2 text-sm font-medium", inStock ? "text-foreground" : "text-destructive")}>

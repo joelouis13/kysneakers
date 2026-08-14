@@ -16,11 +16,15 @@ import type { ProductDetail } from "@/lib/catalog/types";
 import { useCart } from "@/lib/cart/cart-context";
 import { FLAT_DELIVERY_FEE } from "@/lib/checkout/constants";
 import { useCouponPreview } from "@/lib/checkout/hooks";
+import { useCurrency } from "@/lib/currency/currency-context";
+import { convert } from "@/lib/currency/rates";
+import { resolveProductPrice } from "@/lib/currency/product-price";
 
 export default function CartPage() {
   const router = useRouter();
   const { items, activeItems, savedItems, couponCode } = useCart();
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("delivery");
+  const { currency, isGhana, rates } = useCurrency();
 
   const slugs = useMemo(() => [...new Set(items.map((i) => i.productSlug))], [items]);
   const { data: products, isLoading } = useProductsBySlugs(slugs);
@@ -31,17 +35,34 @@ export default function CartPage() {
     return map;
   }, [products]);
 
-  const subtotal = useMemo(() => {
+  // GHS basis — coupon minimum-purchase/discount_value are GHS-denominated
+  // business config (lib/checkout/queries.ts's getCouponPreview), unaffected
+  // by any product's manual EUR price.
+  const subtotalGhs = useMemo(() => {
     return activeItems.reduce((sum, item) => {
       const product = productBySlug.get(item.productSlug);
       return product ? sum + product.effectivePrice * item.quantity : sum;
     }, 0);
   }, [activeItems, productBySlug]);
 
-  const { data: couponPreview } = useCouponPreview(couponCode ?? "", subtotal);
-  const discount = couponPreview?.valid ? couponPreview.discount : 0;
-  const deliveryFee =
+  // Display/charge basis — per-line resolved to the visitor's currency,
+  // honoring each product's manual EUR price when one is set (see
+  // lib/currency/product-price.ts; the same function placeOrder uses).
+  const subtotal = useMemo(() => {
+    return activeItems.reduce((sum, item) => {
+      const product = productBySlug.get(item.productSlug);
+      if (!product) return sum;
+      const unitPrice = resolveProductPrice(product.effectivePrice, product.eurEffectivePrice, currency, rates);
+      return sum + unitPrice * item.quantity;
+    }, 0);
+  }, [activeItems, productBySlug, currency, rates]);
+
+  const { data: couponPreview } = useCouponPreview(couponCode ?? "", subtotalGhs);
+  const discountGhs = couponPreview?.valid ? couponPreview.discount : 0;
+  const discount = isGhana ? discountGhs : convert(discountGhs, currency, rates);
+  const deliveryFeeGhs =
     activeItems.length > 0 && deliveryMethod === "delivery" ? FLAT_DELIVERY_FEE : 0;
+  const deliveryFee = isGhana ? deliveryFeeGhs : convert(deliveryFeeGhs, currency, rates);
   const total = Math.max(0, subtotal - discount) + deliveryFee;
   const itemCount = activeItems.reduce((sum, i) => sum + i.quantity, 0);
 
@@ -121,7 +142,7 @@ export default function CartPage() {
         <div className="space-y-6">
           <div className="rounded-xl border border-border p-6">
             <h2 className="mb-3 text-sm font-semibold text-foreground">Coupon Code</h2>
-            <CouponForm subtotal={subtotal} />
+            <CouponForm subtotal={subtotalGhs} />
           </div>
 
           <div className="rounded-xl border border-border p-6">

@@ -11,23 +11,33 @@ import { useCurrency } from "@/lib/currency/currency-context";
 export function ProductPrice({
   regularPrice,
   salePrice,
+  eurRegularPrice,
+  eurSalePrice,
 }: {
   regularPrice: number;
   salePrice: number | null;
+  eurRegularPrice: number | null;
+  eurSalePrice: number | null;
 }) {
-  const { formatFromGhs } = useCurrency();
+  const { formatPrice } = useCurrency();
 
   if (salePrice) {
     return (
       <>
-        <span className="text-2xl font-semibold text-secondary">{formatFromGhs(salePrice)}</span>
+        <span className="text-2xl font-semibold text-secondary">
+          {formatPrice(salePrice, eurSalePrice)}
+        </span>
         <span className="text-base text-muted-foreground line-through">
-          {formatFromGhs(regularPrice)}
+          {formatPrice(regularPrice, eurRegularPrice)}
         </span>
         <Badge variant="sale">Sale</Badge>
       </>
     );
   }
 
-  return <span className="text-2xl font-semibold text-foreground">{formatFromGhs(regularPrice)}</span>;
+  return (
+    <span className="text-2xl font-semibold text-foreground">
+      {formatPrice(regularPrice, eurRegularPrice)}
+    </span>
+  );
 }

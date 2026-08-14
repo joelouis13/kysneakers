@@ -104,6 +104,8 @@ export interface Database {
           category_id: string | null;
           regular_price: number;
           sale_price: number | null;
+          eur_regular_price: number | null;
+          eur_sale_price: number | null;
           sale_starts_at: string | null;
           sale_ends_at: string | null;
           weight_grams: number | null;
@@ -124,6 +126,8 @@ export interface Database {
         | "brand_id"
         | "category_id"
         | "sale_price"
+        | "eur_regular_price"
+        | "eur_sale_price"
         | "sale_starts_at"
         | "sale_ends_at"
         | "weight_grams"
@@ -456,6 +460,9 @@ export interface Database {
           regular_price: number;
           sale_price: number | null;
           effective_price: number;
+          eur_regular_price: number | null;
+          eur_sale_price: number | null;
+          eur_effective_price: number | null;
           is_featured: boolean;
           is_new_arrival: boolean;
           is_on_sale: boolean;

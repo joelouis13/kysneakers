@@ -26,6 +26,8 @@ function scalarProductFields(values: ProductFormValues) {
     category_id: values.categoryId || null,
     regular_price: values.regularPrice,
     sale_price: values.isOnSale ? (values.salePrice ?? null) : null,
+    eur_regular_price: values.eurRegularPrice ?? null,
+    eur_sale_price: values.isOnSale ? (values.eurSalePrice ?? null) : null,
     weight_grams: values.weightGrams ?? null,
     tags: parseTags(values.tags),
     is_featured: values.isFeatured,

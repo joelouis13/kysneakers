@@ -16,7 +16,7 @@ export type AdminProductFilters = {
 };
 
 const LIST_SELECT = `
-  id, sku, name, slug, status, regular_price, sale_price,
+  id, sku, name, slug, status, regular_price, sale_price, eur_regular_price, eur_sale_price,
   is_featured, is_new_arrival, is_on_sale, deleted_at, created_at,
   brand:brands ( name ),
   category:categories ( name ),
@@ -32,6 +32,8 @@ type ListRow = {
   status: ProductStatus;
   regular_price: number;
   sale_price: number | null;
+  eur_regular_price: number | null;
+  eur_sale_price: number | null;
   is_featured: boolean;
   is_new_arrival: boolean;
   is_on_sale: boolean;
@@ -56,6 +58,8 @@ function mapListRow(row: ListRow): AdminProductListItem {
     status: row.status,
     regularPrice: row.regular_price,
     salePrice: row.sale_price,
+    eurRegularPrice: row.eur_regular_price,
+    eurSalePrice: row.eur_sale_price,
     isFeatured: row.is_featured,
     isNewArrival: row.is_new_arrival,
     isOnSale: row.is_on_sale,
@@ -95,7 +99,7 @@ export async function listAdminProducts(
 
 const DETAIL_SELECT = `
   id, sku, name, slug, description, brand_id, category_id,
-  regular_price, sale_price, weight_grams, tags,
+  regular_price, sale_price, eur_regular_price, eur_sale_price, weight_grams, tags,
   is_featured, is_new_arrival, is_on_sale, status, seo_title, seo_description,
   images:product_images ( id, url, display_order, is_featured ),
   sizes:product_sizes ( id, size, inventory ( id, quantity, low_stock_threshold ) )
@@ -111,6 +115,8 @@ type DetailRow = {
   category_id: string | null;
   regular_price: number;
   sale_price: number | null;
+  eur_regular_price: number | null;
+  eur_sale_price: number | null;
   weight_grams: number | null;
   tags: string[];
   is_featured: boolean;
@@ -146,6 +152,8 @@ export async function getAdminProductById(
     categoryId: row.category_id,
     regularPrice: row.regular_price,
     salePrice: row.sale_price,
+    eurRegularPrice: row.eur_regular_price,
+    eurSalePrice: row.eur_sale_price,
     weightGrams: row.weight_grams,
     tags: row.tags,
     isFeatured: row.is_featured,
