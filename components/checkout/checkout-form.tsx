@@ -142,6 +142,19 @@ export function CheckoutForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currency, isGhana]);
 
+  // The form's own `items` field (validated by checkoutSchema on submit)
+  // must mirror the real cart — it's never set anywhere else, and a stale
+  // empty default here silently fails validation on every submit attempt
+  // with no visible error (root cause of "Place Order does nothing").
+  useEffect(() => {
+    setValue(
+      "items",
+      activeItems.map((i) => ({ productSlug: i.productSlug, size: i.size, quantity: i.quantity })),
+      { shouldValidate: true }
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeItems]);
+
   const paymentMethod = useWatch({ control, name: "paymentMethod" });
   const deliveryMethod = useWatch({ control, name: "deliveryMethod" });
 
@@ -173,6 +186,25 @@ export function CheckoutForm() {
     else if (step === "payment") setStep("delivery");
   }
 
+  // react-hook-form validates the WHOLE schema on submit, not just the
+  // currently-visible step — if an earlier step (Shipping/Delivery) has an
+  // invalid field, this fires instead of onSubmit, and silently doing
+  // nothing here is exactly the "Place Order does nothing" bug: the error
+  // message exists in `errors`, but its step isn't mounted so it's never
+  // seen. Jump back to whichever step actually has the problem and say so.
+  function onInvalid(formErrors: typeof errors) {
+    if (formErrors.items) {
+      toast.error("Your cart changed — please review it before placing your order.");
+      return;
+    }
+    if (formErrors.customerName || formErrors.customerEmail || formErrors.customerPhone || formErrors.shipping) {
+      setStep("shipping");
+    } else if (formErrors.deliveryMethod) {
+      setStep("delivery");
+    }
+    toast.error("Please check the highlighted fields before placing your order.");
+  }
+
   async function onSubmit(values: CheckoutValues) {
     const payload: CheckoutValues = {
       ...values,
@@ -188,7 +220,13 @@ export function CheckoutForm() {
           : values.shipping,
     };
 
-    const result = await placeOrder(payload);
+    let result;
+    try {
+      result = await placeOrder(payload);
+    } catch {
+      toast.error("Something went wrong placing your order. Please try again.");
+      return;
+    }
     if ("error" in result) {
       toast.error(result.error);
       return;
@@ -286,7 +324,7 @@ export function CheckoutForm() {
       <CheckoutSteps current={step} />
 
       <form
-        onSubmit={handleSubmit(onSubmit)}
+        onSubmit={handleSubmit(onSubmit, onInvalid)}
         noValidate
         className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_380px]"
       >
