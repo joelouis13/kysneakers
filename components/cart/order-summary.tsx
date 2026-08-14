@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { Separator } from "@/components/ui/separator";
 import { useCurrency } from "@/lib/currency/currency-context";
+import { formatCurrency } from "@/lib/currency/format";
 
 export function OrderSummary({
   subtotal,
@@ -20,7 +21,8 @@ export function OrderSummary({
   itemCount: number;
   actionSlot?: ReactNode;
 }) {
-  const { formatFromGhs } = useCurrency();
+  const { currency, vatRate, formatFromGhs, convertFromGhs, vatPortion } = useCurrency();
+  const vatAmount = vatRate > 0 ? vatPortion(convertFromGhs(total)) : 0;
 
   return (
     <div className="rounded-xl border border-border p-6">
@@ -49,6 +51,12 @@ export function OrderSummary({
         <span>Total</span>
         <span>{formatFromGhs(total)}</span>
       </div>
+
+      {vatRate > 0 && (
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          Includes VAT ({Math.round(vatRate * 100)}%): {formatCurrency(vatAmount, currency)}
+        </p>
+      )}
 
       {actionSlot && <div className="mt-6">{actionSlot}</div>}
     </div>

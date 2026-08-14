@@ -48,6 +48,8 @@ export type OrderStatusPayload = {
   deliveryFee: number;
   total: number;
   currency: Currency;
+  vatRate: number;
+  vatAmount: number;
   createdAt: string;
   items: OrderItemSummary[];
   payment: OrderPaymentSummary | null;

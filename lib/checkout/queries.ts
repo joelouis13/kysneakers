@@ -69,7 +69,7 @@ export async function getCouponPreview(
 
 const ORDER_STATUS_SELECT = `
   id, order_number, status, customer_email, customer_phone,
-  subtotal, discount_total, delivery_fee, total, currency, created_at,
+  subtotal, discount_total, delivery_fee, total, currency, vat_rate, vat_amount, created_at,
   order_items ( product_name, size, sku, unit_price, quantity, line_total ),
   payments ( id, status, method, provider_message )
 `;
@@ -85,6 +85,8 @@ type OrderStatusRow = {
   delivery_fee: number;
   total: number;
   currency: string;
+  vat_rate: number;
+  vat_amount: number;
   created_at: string;
   order_items: {
     product_name: string;
@@ -114,6 +116,8 @@ export function mapOrderStatusRow(row: OrderStatusRow): OrderStatusPayload {
     deliveryFee: row.delivery_fee,
     total: row.total,
     currency: row.currency as Currency,
+    vatRate: row.vat_rate,
+    vatAmount: row.vat_amount,
     createdAt: row.created_at,
     items: row.order_items.map((i) => ({
       productName: i.product_name,

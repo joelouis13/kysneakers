@@ -1,7 +1,9 @@
 "use server";
 
 import type { Currency } from "@/lib/currency/config";
+import { detectCountry } from "@/lib/currency/detect";
 import { convert, convertBetween, getExchangeRates, type ExchangeRates } from "@/lib/currency/rates";
+import { getVatRate, vatPortionOfInclusiveAmount } from "@/lib/currency/vat";
 import { channelForMethod, initiatePayment } from "@/lib/moolre/client";
 import { MoolreConfigError } from "@/lib/moolre/config";
 import { isValidGhPhone, toLocalPhone } from "@/lib/moolre/phone";
@@ -234,6 +236,15 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
   const deliveryFee = isGhana ? deliveryFeeGhs : convert(deliveryFeeGhs, data.currency, rates!);
   const total = Math.max(0, subtotal - discountTotal) + deliveryFee;
 
+  // VAT liability is derived from the visitor's detected location (server-side,
+  // not client-supplied — same signal the checkout UI's displayed VAT
+  // breakdown was computed from, so what's shown and what's recorded always
+  // agree). Currently only Netherlands has a configured rate; everywhere else
+  // (including Ghana) is 0. total is already VAT-inclusive by design, so this
+  // only extracts the portion already in it — it never changes the total.
+  const vatRate = getVatRate(await detectCountry());
+  const vatAmount = vatPortionOfInclusiveAmount(total, vatRate);
+
   const lineItems = isGhana
     ? lineItemsGhs
     : lineItemsGhs.map((li) => ({
@@ -324,6 +335,8 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
         coupon_id: couponId,
         total,
         currency: data.currency,
+        vat_rate: vatRate,
+        vat_amount: vatAmount,
         notes: data.notes ?? null,
       })
       .select("id,order_number,created_at")
@@ -430,6 +443,8 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
     deliveryFee,
     total,
     currency: data.currency,
+    vatRate,
+    vatAmount,
     createdAt,
     items: lineItems.map((li) => ({
       productName: li.product_name,

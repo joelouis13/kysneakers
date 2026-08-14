@@ -12,6 +12,7 @@ import { getCurrencyForCountry } from "@/lib/currency/config";
 import { CurrencyProvider } from "@/lib/currency/currency-context";
 import { detectCountry } from "@/lib/currency/detect";
 import { getExchangeRates } from "@/lib/currency/rates";
+import { getVatRate } from "@/lib/currency/vat";
 import { createClient } from "@/lib/supabase/server";
 
 const inter = Inter({
@@ -45,6 +46,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const country = await detectCountry();
   const currency = getCurrencyForCountry(country);
   const rates = await getExchangeRates();
+  const vatRate = getVatRate(country);
 
   return (
     <html
@@ -57,7 +59,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <TooltipProvider>
             <QueryProvider>
-              <CurrencyProvider currency={currency} rates={rates}>
+              <CurrencyProvider currency={currency} rates={rates} vatRate={vatRate}>
                 <AuthProvider initialUser={user} initialIsStaff={isStaff}>
                   {children}
                   <Toaster />

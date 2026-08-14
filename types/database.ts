@@ -283,6 +283,8 @@ export interface Database {
           coupon_id: string | null;
           total: number;
           currency: string;
+          vat_rate: number;
+          vat_amount: number;
           notes: string | null;
           created_at: string;
           updated_at: string;
@@ -300,6 +302,8 @@ export interface Database {
         | "discount_total"
         | "coupon_id"
         | "currency"
+        | "vat_rate"
+        | "vat_amount"
         | "notes"
         | "created_at"
         | "updated_at"

@@ -109,6 +109,12 @@ export default async function AdminOrderDetailPage({
             <span>Total</span>
             <span>{formatCurrency(order.total, order.currency)}</span>
           </div>
+          {order.vatRate > 0 && (
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Includes VAT ({Math.round(order.vatRate * 100)}%)</span>
+              <span>{formatCurrency(order.vatAmount, order.currency)}</span>
+            </div>
+          )}
         </div>
       </div>
 

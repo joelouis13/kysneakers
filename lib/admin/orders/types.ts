@@ -53,6 +53,8 @@ export type AdminOrderDetail = {
   deliveryFee: number;
   total: number;
   currency: Currency;
+  vatRate: number;
+  vatAmount: number;
   notes: string | null;
   createdAt: string;
   items: AdminOrderItem[];
