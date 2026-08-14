@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -55,7 +56,8 @@ export function OrderStatusForm({ orderId, currentStatus }: { orderId: string; c
         </Select>
       </div>
       <Button onClick={handleSave} disabled={isSaving || status === currentStatus}>
-        Save
+        {isSaving && <Loader2 className="size-4 animate-spin" />}
+        {isSaving ? "Saving..." : "Save"}
       </Button>
     </div>
   );

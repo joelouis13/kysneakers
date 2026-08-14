@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -72,7 +73,8 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
         </div>
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
-          Log in
+          {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+          {isSubmitting ? "Logging in..." : "Log in"}
         </Button>
       </form>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -65,7 +66,8 @@ export function OrderLookupForm() {
       </div>
       {notFound && <p className="text-xs text-destructive">{notFound}</p>}
       <Button type="submit" disabled={isSubmitting} className="w-full">
-        Track Order
+        {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+        {isSubmitting ? "Searching..." : "Track Order"}
       </Button>
     </form>
   );

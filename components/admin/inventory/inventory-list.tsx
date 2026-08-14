@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -47,7 +48,8 @@ function InventoryRow({ row }: { row: AdminInventoryRow }) {
           className="h-9 w-20"
         />
         <Button size="sm" variant="outline" onClick={handleSave} disabled={!isDirty || isSaving}>
-          Save
+          {isSaving && <Loader2 className="size-4 animate-spin" />}
+          {isSaving ? "Saving..." : "Save"}
         </Button>
       </div>
     </div>

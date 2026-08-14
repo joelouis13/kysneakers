@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Star } from "lucide-react";
+import { Loader2, Star } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -158,7 +158,8 @@ export function ReviewForm({
           </div>
 
           <Button type="submit" disabled={isSubmitting} className="self-start">
-            Submit Review
+            {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+            {isSubmitting ? "Submitting..." : "Submit Review"}
           </Button>
         </form>
       </CardContent>

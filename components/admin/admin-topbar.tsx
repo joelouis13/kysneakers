@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LogOut } from "lucide-react";
+import { Loader2, LogOut } from "lucide-react";
 import { useTransition } from "react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -46,8 +46,8 @@ export function AdminTopbar() {
             disabled={isLoggingOut}
             onClick={() => startLogoutTransition(() => logout())}
           >
-            <LogOut className="size-4" />
-            Log out
+            {isLoggingOut ? <Loader2 className="size-4 animate-spin" /> : <LogOut className="size-4" />}
+            {isLoggingOut ? "Logging out..." : "Log out"}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

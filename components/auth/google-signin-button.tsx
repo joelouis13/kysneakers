@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -33,8 +34,8 @@ export function GoogleSignInButton({ redirectTo }: { redirectTo: string }) {
       disabled={isRedirecting}
       onClick={handleClick}
     >
-      <GoogleIcon className="size-4" />
-      Continue with Google
+      {isRedirecting ? <Loader2 className="size-4 animate-spin" /> : <GoogleIcon className="size-4" />}
+      {isRedirecting ? "Redirecting..." : "Continue with Google"}
     </Button>
   );
 }

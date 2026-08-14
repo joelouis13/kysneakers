@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { MailCheck } from "lucide-react";
+import { Loader2, MailCheck } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -96,7 +96,8 @@ export function SignupForm({ redirectTo }: { redirectTo: string }) {
         </div>
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
-          Create account
+          {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+          {isSubmitting ? "Creating account..." : "Create account"}
         </Button>
       </form>
 

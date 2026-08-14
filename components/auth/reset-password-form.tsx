@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -56,7 +57,8 @@ export function ResetPasswordForm() {
       </div>
 
       <Button type="submit" disabled={isSubmitting} className="w-full">
-        Update password
+        {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+        {isSubmitting ? "Updating..." : "Update password"}
       </Button>
     </form>
   );

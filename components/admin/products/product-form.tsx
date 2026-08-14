@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
@@ -19,6 +20,16 @@ import type { ProductBrand, ProductCategoryRef } from "@/lib/catalog/types";
 import { slugify } from "@/lib/catalog/slugify";
 
 import { ImagePicker, toImageInputs, type ImageDraft } from "./image-picker";
+
+/**
+ * `valueAsNumber` reads the input's native `.valueAsNumber`, which is `NaN`
+ * for an empty number input — not `undefined`. Zod's `.optional()` only
+ * treats `undefined` as "not provided", so an empty optional field was
+ * failing validation as an invalid number instead of being skipped.
+ */
+function optionalNumber(value: string) {
+  return value === "" ? undefined : Number(value);
+}
 
 function defaultValuesFor(product?: AdminProductDetail): ProductFormValues {
   if (!product) {
@@ -217,7 +228,7 @@ export function ProductForm({
           </div>
           <div>
             <Label className="mb-1.5">Weight (grams, optional)</Label>
-            <Input type="number" step="1" {...register("weightGrams", { valueAsNumber: true })} />
+            <Input type="number" step="1" {...register("weightGrams", { setValueAs: optionalNumber })} />
           </div>
           <div>
             <Label className="mb-1.5">Regular Price (EUR, optional)</Label>
@@ -225,7 +236,7 @@ export function ProductForm({
               type="number"
               step="0.01"
               aria-invalid={!!errors.eurRegularPrice}
-              {...register("eurRegularPrice", { valueAsNumber: true })}
+              {...register("eurRegularPrice", { setValueAs: optionalNumber })}
             />
             {errors.eurRegularPrice ? (
               <p className="mt-1.5 text-xs text-destructive">{errors.eurRegularPrice.message}</p>
@@ -253,7 +264,7 @@ export function ProductForm({
                   type="number"
                   step="0.01"
                   aria-invalid={!!errors.salePrice}
-                  {...register("salePrice", { valueAsNumber: true })}
+                  {...register("salePrice", { setValueAs: optionalNumber })}
                 />
                 {errors.salePrice && (
                   <p className="mt-1.5 text-xs text-destructive">{errors.salePrice.message}</p>
@@ -265,7 +276,7 @@ export function ProductForm({
                   type="number"
                   step="0.01"
                   aria-invalid={!!errors.eurSalePrice}
-                  {...register("eurSalePrice", { valueAsNumber: true })}
+                  {...register("eurSalePrice", { setValueAs: optionalNumber })}
                 />
                 {errors.eurSalePrice ? (
                   <p className="mt-1.5 text-xs text-destructive">{errors.eurSalePrice.message}</p>
@@ -397,7 +408,14 @@ export function ProductForm({
       </section>
 
       <Button type="submit" size="lg" variant="secondary" disabled={isSubmitting}>
-        {mode === "create" ? "Create Product" : "Save Changes"}
+        {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+        {isSubmitting
+          ? mode === "create"
+            ? "Creating..."
+            : "Saving..."
+          : mode === "create"
+            ? "Create Product"
+            : "Save Changes"}
       </Button>
     </form>
   );

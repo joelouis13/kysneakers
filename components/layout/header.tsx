@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Heart, LogOut, Menu, Moon, Search, ShoppingBag, Sun, User } from "lucide-react";
+import { Heart, Loader2, LogOut, Menu, Moon, Search, ShoppingBag, Sun, User } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useState, useTransition } from "react";
 
@@ -206,8 +206,8 @@ export function Header() {
                   disabled={isLoggingOut}
                   onClick={() => startLogoutTransition(() => logout())}
                 >
-                  <LogOut className="size-4" />
-                  Log out
+                  {isLoggingOut ? <Loader2 className="size-4 animate-spin" /> : <LogOut className="size-4" />}
+                  {isLoggingOut ? "Logging out..." : "Log out"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

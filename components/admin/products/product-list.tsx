@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MoreHorizontal } from "lucide-react";
+import { Loader2, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -149,7 +149,14 @@ export function ProductList({ products }: { products: AdminProductListItem[] }) 
               onClick={handleConfirm}
               disabled={isActing}
             >
-              {confirmTarget?.action === "delete" ? "Delete" : "Restore"}
+              {isActing && <Loader2 className="size-4 animate-spin" />}
+              {isActing
+                ? confirmTarget?.action === "delete"
+                  ? "Deleting..."
+                  : "Restoring..."
+                : confirmTarget?.action === "delete"
+                  ? "Delete"
+                  : "Restore"}
             </Button>
           </DialogFooter>
         </DialogContent>
