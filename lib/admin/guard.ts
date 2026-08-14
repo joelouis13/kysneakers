@@ -7,9 +7,19 @@ import { createServiceRoleClient } from "@/lib/supabase/server";
 export async function requireStaffUser(
   supabase: SupabaseClient<Database>
 ): Promise<{ userId: string } | { error: string }> {
-  const {
+  let {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // A valid session can transiently look empty right after the browser's
+  // chunked auth cookie was mid-rewrite when this request landed. One retry
+  // (which forces a fresh read/refresh) is enough to self-heal that race.
+  if (!user) {
+    await supabase.auth.refreshSession();
+    ({
+      data: { user },
+    } = await supabase.auth.getUser());
+  }
   if (!user) return { error: "You must be logged in." };
 
   const { data: isStaff } = await supabase.rpc("is_staff");
