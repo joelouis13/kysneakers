@@ -41,6 +41,7 @@ export type OrderStatusPayload = {
   orderId: string;
   orderNumber: string;
   status: OrderStatus;
+  customerName: string;
   customerEmail: string;
   customerPhone: string;
   subtotal: number;

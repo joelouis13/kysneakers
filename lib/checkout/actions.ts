@@ -446,6 +446,7 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
     orderId,
     orderNumber,
     status: "pending_payment",
+    customerName: data.customerName,
     customerEmail: data.customerEmail,
     customerPhone: data.customerPhone,
     subtotal,

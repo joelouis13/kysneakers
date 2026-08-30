@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 
+import { getOrderById } from "@/lib/checkout/queries";
+import { sendOrderConfirmationEmail } from "@/lib/email/order-confirmation";
 import { getStripeWebhookSecret } from "@/lib/stripe/config";
 import { getStripeClient } from "@/lib/stripe/client";
 import { createServiceRoleClient } from "@/lib/supabase/server";
@@ -56,11 +58,16 @@ export async function POST(request: NextRequest) {
   }
 
   if (session.payment_status === "paid") {
-    await supabase.rpc("confirm_payment_success", {
+    const { data: confirmResult } = await supabase.rpc("confirm_payment_success", {
       p_payment_id: paymentId,
       p_provider_reference: session.id,
       p_webhook_payload: event as never,
     });
+
+    if (confirmResult?.[0]?.newly_confirmed) {
+      const order = await getOrderById(supabase, confirmResult[0].order_id);
+      if (order) await sendOrderConfirmationEmail(order);
+    }
   } else {
     await supabase
       .from("payments")

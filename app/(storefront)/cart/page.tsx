@@ -14,17 +14,17 @@ import { DeliveryMethodSelect, type DeliveryMethod } from "@/components/checkout
 import { useProductsBySlugs } from "@/lib/catalog/hooks";
 import type { ProductDetail } from "@/lib/catalog/types";
 import { useCart } from "@/lib/cart/cart-context";
-import { FLAT_DELIVERY_FEE } from "@/lib/checkout/constants";
+import { FLAT_DELIVERY_FEE, FLAT_INTERNATIONAL_DELIVERY_FEE_USD } from "@/lib/checkout/constants";
 import { useCouponPreview } from "@/lib/checkout/hooks";
 import { useCurrency } from "@/lib/currency/currency-context";
-import { convert } from "@/lib/currency/rates";
+import { convert, convertBetween } from "@/lib/currency/rates";
 import { resolveProductPrice } from "@/lib/currency/product-price";
 
 export default function CartPage() {
   const router = useRouter();
   const { items, activeItems, savedItems, couponCode } = useCart();
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("delivery");
-  const { currency, isGhana, rates } = useCurrency();
+  const { currency, isGhana, rates, formatFromUsd } = useCurrency();
 
   const slugs = useMemo(() => [...new Set(items.map((i) => i.productSlug))], [items]);
   const { data: products, isLoading } = useProductsBySlugs(slugs);
@@ -62,7 +62,15 @@ export default function CartPage() {
   const discount = isGhana ? discountGhs : convert(discountGhs, currency, rates);
   const deliveryFeeGhs =
     activeItems.length > 0 && deliveryMethod === "delivery" ? FLAT_DELIVERY_FEE : 0;
-  const deliveryFee = isGhana ? deliveryFeeGhs : convert(deliveryFeeGhs, currency, rates);
+  // International customers always pay the dedicated USD-denominated flat
+  // rate (there's no pickup option outside Ghana) — never a converted GHS
+  // figure, so this matches what checkout-form.tsx actually charges.
+  const deliveryFee =
+    activeItems.length === 0
+      ? 0
+      : isGhana
+        ? deliveryFeeGhs
+        : convertBetween(FLAT_INTERNATIONAL_DELIVERY_FEE_USD, "USD", currency, rates);
   const total = Math.max(0, subtotal - discount) + deliveryFee;
   const itemCount = activeItems.reduce((sum, i) => sum + i.quantity, 0);
 
@@ -147,7 +155,13 @@ export default function CartPage() {
 
           <div className="rounded-xl border border-border p-6">
             <h2 className="mb-3 text-sm font-semibold text-foreground">Delivery Method</h2>
-            <DeliveryMethodSelect value={deliveryMethod} onChange={setDeliveryMethod} />
+            {isGhana ? (
+              <DeliveryMethodSelect value={deliveryMethod} onChange={setDeliveryMethod} />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                International Shipping — <span className="text-foreground">{formatFromUsd(FLAT_INTERNATIONAL_DELIVERY_FEE_USD)}</span> flat rate, delivered worldwide.
+              </p>
+            )}
           </div>
 
           <OrderSummary

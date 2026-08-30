@@ -21,7 +21,7 @@ export async function generateMetadata({
   if (!category) return {};
   return {
     title: category.name,
-    description: `Shop ${category.name} sneakers at KYSneakers.`,
+    description: `Shop ${category.name} at KYSneakers.`,
   };
 }
 

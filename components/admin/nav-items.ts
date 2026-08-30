@@ -24,8 +24,8 @@ export type AdminNavItem = {
 export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard, enabled: true },
   { label: "Products", href: "/admin/products", icon: Package, enabled: true },
-  { label: "Categories", href: "/admin/categories", icon: Tags, enabled: false },
-  { label: "Brands", href: "/admin/brands", icon: BadgeCheck, enabled: false },
+  { label: "Categories", href: "/admin/categories", icon: Tags, enabled: true },
+  { label: "Brands", href: "/admin/brands", icon: BadgeCheck, enabled: true },
   { label: "Inventory", href: "/admin/inventory", icon: Boxes, enabled: true },
   { label: "Orders", href: "/admin/orders", icon: ClipboardList, enabled: true },
   { label: "Customers", href: "/admin/customers", icon: Users, enabled: false },

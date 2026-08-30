@@ -9,6 +9,7 @@ import { ImageGallery } from "@/components/shop/image-gallery";
 import { ProductPrice } from "@/components/shop/product-price";
 import { ProductReviews } from "@/components/shop/product-reviews";
 import { getProductBySlug, getRelatedProducts } from "@/lib/catalog/queries";
+import { RESELLER_DISCLAIMER } from "@/lib/data/disclaimer";
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
@@ -121,6 +122,8 @@ export default async function ProductPage({
               </div>
             )}
           </dl>
+
+          <p className="mt-6 text-xs leading-relaxed text-muted-foreground">{RESELLER_DISCLAIMER}</p>
         </div>
       </div>
 

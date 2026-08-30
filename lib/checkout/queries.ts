@@ -68,7 +68,7 @@ export async function getCouponPreview(
 }
 
 const ORDER_STATUS_SELECT = `
-  id, order_number, status, customer_email, customer_phone,
+  id, order_number, status, customer_name, customer_email, customer_phone,
   subtotal, discount_total, delivery_fee, total, currency, vat_rate, vat_amount, created_at,
   order_items ( product_name, size, sku, unit_price, quantity, line_total ),
   payments ( id, status, method, provider_message )
@@ -78,6 +78,7 @@ type OrderStatusRow = {
   id: string;
   order_number: string;
   status: OrderStatusPayload["status"];
+  customer_name: string;
   customer_email: string;
   customer_phone: string;
   subtotal: number;
@@ -109,6 +110,7 @@ export function mapOrderStatusRow(row: OrderStatusRow): OrderStatusPayload {
     orderId: row.id,
     orderNumber: row.order_number,
     status: row.status,
+    customerName: row.customer_name,
     customerEmail: row.customer_email,
     customerPhone: row.customer_phone,
     subtotal: row.subtotal,

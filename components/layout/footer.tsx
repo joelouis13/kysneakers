@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { NewsletterForm } from "@/components/layout/newsletter-form";
 import { FacebookIcon, InstagramIcon, XIcon } from "@/components/icons/social";
+import { RESELLER_DISCLAIMER } from "@/lib/data/disclaimer";
 
 const FOOTER_LINKS: { title: string; links: { label: string; href: string }[] }[] = [
   {
@@ -114,7 +115,11 @@ export function Footer() {
           <NewsletterForm />
         </div>
 
-        <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row">
+        <div className="mt-8 border-t border-border pt-6">
+          <p className="max-w-4xl text-xs leading-relaxed text-muted-foreground">{RESELLER_DISCLAIMER}</p>
+        </div>
+
+        <div className="mt-6 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row">
           <p>&copy; {new Date().getFullYear()} KYSneakers. All rights reserved.</p>
           <div className="flex gap-4">
             <Link href="/terms" className="hover:text-secondary">Terms</Link>

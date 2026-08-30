@@ -525,6 +525,7 @@ export interface Database {
           order_id: string;
           order_status: OrderStatus;
           payment_status: PaymentStatus;
+          newly_confirmed: boolean;
         }[];
       };
     };

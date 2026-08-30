@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+import { getOrderById } from "@/lib/checkout/queries";
+import { sendOrderConfirmationEmail } from "@/lib/email/order-confirmation";
 import { checkPaymentStatus } from "@/lib/moolre/client";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 
@@ -63,11 +65,16 @@ export async function POST(request: NextRequest) {
   const statusResponse = await checkPaymentStatus({ id: payment.provider_reference, idtype: 2 });
 
   if (statusResponse.data?.txstatus === 1) {
-    await supabase.rpc("confirm_payment_success", {
+    const { data: confirmResult } = await supabase.rpc("confirm_payment_success", {
       p_payment_id: payment.id,
       p_provider_reference: payment.provider_reference,
       p_webhook_payload: payload as never,
     });
+
+    if (confirmResult?.[0]?.newly_confirmed) {
+      const order = await getOrderById(supabase, confirmResult[0].order_id);
+      if (order) await sendOrderConfirmationEmail(order);
+    }
   } else {
     await supabase
       .from("payments")
