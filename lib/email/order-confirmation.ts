@@ -97,9 +97,11 @@ export async function sendOrderConfirmationEmail(order: OrderStatusPayload): Pro
   const orderUrl = `${siteUrl}/orders`;
 
   try {
+    const fromEmail = getFromEmail();
     await getResendClient().emails.send({
-      from: `KYSneakers <${getFromEmail()}>`,
+      from: `KYSneakers <${fromEmail}>`,
       to: order.customerEmail,
+      bcc: fromEmail,
       subject: `Order confirmed — ${order.orderNumber}`,
       html: buildHtml(order, orderUrl),
       text: buildText(order, orderUrl),

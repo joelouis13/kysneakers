@@ -1,3 +1,4 @@
+import { CookieConsent } from "@/components/layout/cookie-consent";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
 import { CartProvider } from "@/lib/cart/cart-context";
@@ -12,6 +13,7 @@ export default function StorefrontLayout({ children }: { children: React.ReactNo
           <main className="flex-1">{children}</main>
           <Footer />
         </div>
+        <CookieConsent />
       </WishlistProvider>
     </CartProvider>
   );
