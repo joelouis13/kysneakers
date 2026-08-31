@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { getOrderById } from "@/lib/checkout/queries";
-import { sendOrderConfirmationEmail } from "@/lib/email/order-confirmation";
+import { sendNewOrderStaffNotification, sendOrderConfirmationEmail } from "@/lib/email/order-confirmation";
 import { checkPaymentStatus } from "@/lib/moolre/client";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 
@@ -73,7 +73,10 @@ export async function POST(request: NextRequest) {
 
     if (confirmResult?.[0]?.newly_confirmed) {
       const order = await getOrderById(supabase, confirmResult[0].order_id);
-      if (order) await sendOrderConfirmationEmail(order);
+      if (order) {
+        await sendOrderConfirmationEmail(order);
+        await sendNewOrderStaffNotification(order);
+      }
     }
   } else {
     await supabase

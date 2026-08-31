@@ -97,16 +97,91 @@ export async function sendOrderConfirmationEmail(order: OrderStatusPayload): Pro
   const orderUrl = `${siteUrl}/orders`;
 
   try {
-    const fromEmail = getFromEmail();
     await getResendClient().emails.send({
-      from: `KYSneakers <${fromEmail}>`,
+      from: `KYSneakers <${getFromEmail()}>`,
       to: order.customerEmail,
-      bcc: fromEmail,
       subject: `Order confirmed — ${order.orderNumber}`,
       html: buildHtml(order, orderUrl),
       text: buildText(order, orderUrl),
     });
   } catch (err) {
     console.error("Failed to send order confirmation email", order.orderNumber, err);
+  }
+}
+
+function buildStaffHtml(order: OrderStatusPayload, adminOrderUrl: string): string {
+  const rows = order.items
+    .map(
+      (item) => `
+        <tr>
+          <td style="padding:8px 0;color:#111827;font-size:14px;">
+            ${escapeHtml(item.productName)} · ${escapeHtml(item.size)} × ${item.quantity}
+          </td>
+          <td style="padding:8px 0;text-align:right;color:#111827;font-size:14px;">
+            ${formatCurrency(item.lineTotal, order.currency)}
+          </td>
+        </tr>`
+    )
+    .join("");
+
+  return `
+  <div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;">
+    <h1 style="font-size:20px;color:#111827;margin:0 0 4px;">New order — ${escapeHtml(order.orderNumber)}</h1>
+    <p style="color:#4b5563;font-size:14px;margin:0 0 24px;">
+      Payment confirmed. Total: <strong>${formatCurrency(order.total, order.currency)}</strong>
+    </p>
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+      <tr><td style="padding:4px 0;color:#4b5563;font-size:14px;">Customer</td><td style="padding:4px 0;text-align:right;color:#111827;font-size:14px;">${escapeHtml(order.customerName)}</td></tr>
+      <tr><td style="padding:4px 0;color:#4b5563;font-size:14px;">Email</td><td style="padding:4px 0;text-align:right;color:#111827;font-size:14px;">${escapeHtml(order.customerEmail)}</td></tr>
+      <tr><td style="padding:4px 0;color:#4b5563;font-size:14px;">Phone</td><td style="padding:4px 0;text-align:right;color:#111827;font-size:14px;">${escapeHtml(order.customerPhone)}</td></tr>
+    </table>
+
+    <table style="width:100%;border-collapse:collapse;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;margin-bottom:24px;">
+      ${rows}
+    </table>
+
+    <a href="${adminOrderUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:10px 20px;border-radius:8px;">
+      View order in admin
+    </a>
+  </div>`;
+}
+
+function buildStaffText(order: OrderStatusPayload, adminOrderUrl: string): string {
+  const lines = order.items.map(
+    (item) =>
+      `- ${item.productName} · ${item.size} × ${item.quantity} — ${formatCurrency(item.lineTotal, order.currency)}`
+  );
+
+  return [
+    `New order — ${order.orderNumber}`,
+    `Total: ${formatCurrency(order.total, order.currency)}`,
+    ``,
+    `Customer: ${order.customerName}`,
+    `Email: ${order.customerEmail}`,
+    `Phone: ${order.customerPhone}`,
+    ``,
+    ...lines,
+    ``,
+    `View order in admin: ${adminOrderUrl}`,
+  ].join("\n");
+}
+
+/** Internal notification to staff — separate from the customer-facing confirmation, tailored for fulfillment. */
+export async function sendNewOrderStaffNotification(order: OrderStatusPayload): Promise<void> {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const adminOrderUrl = `${siteUrl}/admin/orders/${order.orderId}`;
+
+  try {
+    const fromEmail = getFromEmail();
+    await getResendClient().emails.send({
+      from: `KYSneakers Orders <${fromEmail}>`,
+      to: fromEmail,
+      subject: `New order — ${order.orderNumber}`,
+      html: buildStaffHtml(order, adminOrderUrl),
+      text: buildStaffText(order, adminOrderUrl),
+    });
+  } catch (err) {
+    console.error("Failed to send staff order notification", order.orderNumber, err);
   }
 }
