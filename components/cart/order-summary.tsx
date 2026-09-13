@@ -20,7 +20,7 @@ export function OrderSummary({
   total,
   itemCount,
   actionSlot,
-  vat,
+  vatIncluded,
 }: {
   subtotal: number;
   discount: number;
@@ -29,16 +29,17 @@ export function OrderSummary({
   itemCount: number;
   actionSlot?: ReactNode;
   /**
-   * Overrides the visitor's IP-detected VAT rate (from useCurrency) — pass
-   * this once the order's actual VAT-liable country is known from a more
-   * authoritative source, e.g. the shipping address the customer typed in
-   * checkout, so the preview matches what placeOrder will actually charge.
+   * Whether this order's prices already have Dutch VAT baked in (product
+   * prices are set VAT-inclusive by the admin, so there's nothing to
+   * calculate here — this only controls whether the disclosure note shows).
+   * Overrides the visitor's IP-detected default once the order's actual
+   * country is known from a more authoritative source, e.g. the shipping
+   * address typed in checkout.
    */
-  vat?: { rate: number; amount: number };
+  vatIncluded?: boolean;
 }) {
-  const { currency, vatRate: detectedVatRate, vatPortion } = useCurrency();
-  const vatRate = vat?.rate ?? detectedVatRate;
-  const vatAmount = vat ? vat.amount : vatRate > 0 ? vatPortion(total) : 0;
+  const { currency, vatRate: detectedVatRate } = useCurrency();
+  const showVatNote = vatIncluded ?? detectedVatRate > 0;
 
   return (
     <div className="rounded-xl border border-border p-6">
@@ -68,10 +69,8 @@ export function OrderSummary({
         <span>{formatCurrency(total, currency)}</span>
       </div>
 
-      {vatRate > 0 && (
-        <p className="mt-1.5 text-xs text-muted-foreground">
-          Includes VAT ({Math.round(vatRate * 100)}%): {formatCurrency(vatAmount, currency)}
-        </p>
+      {showVatNote && (
+        <p className="mt-1.5 text-xs text-muted-foreground">VAT included in the total price.</p>
       )}
 
       {actionSlot && <div className="mt-6">{actionSlot}</div>}

@@ -5,7 +5,6 @@ import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { Currency } from "./config";
 import { formatCurrency } from "./format";
 import { convert, convertBetween, type ExchangeRates } from "./rates";
-import { vatPortionOfInclusiveAmount } from "./vat";
 
 type CurrencyContextValue = {
   currency: Currency;
@@ -21,8 +20,6 @@ type CurrencyContextValue = {
   formatFromUsd: (amountInUsd: number) => string;
   /** Takes a EUR-denominated amount (e.g. the minimum order total), returns it formatted in the visitor's currency. */
   formatFromEur: (amountInEur: number) => string;
-  /** VAT already included in `grossAmount` (display currency), for the "Includes VAT: X" breakdown line — doesn't change the total. */
-  vatPortion: (grossAmount: number) => number;
   /**
    * Product-price display: uses the admin-set EUR price directly (no FX
    * conversion) when the visitor is in EUR and one is set; otherwise falls
@@ -57,7 +54,6 @@ export function CurrencyProvider({
         formatCurrency(convertBetween(amountInUsd, "USD", currency, rates), currency),
       formatFromEur: (amountInEur: number) =>
         formatCurrency(convertBetween(amountInEur, "EUR", currency, rates), currency),
-      vatPortion: (grossAmount: number) => vatPortionOfInclusiveAmount(grossAmount, vatRate),
       formatPrice: (ghsAmount: number, eurAmount: number | null) =>
         currency === "EUR" && eurAmount != null
           ? formatCurrency(eurAmount, "EUR")

@@ -45,13 +45,13 @@ function buildHtml(order: OrderStatusPayload, orderUrl: string): string {
       ${rows}
     </table>
 
-    <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+    <table style="width:100%;border-collapse:collapse;margin-bottom:${order.vatRate > 0 ? "4" : "24"}px;">
       ${summaryRow("Subtotal", formatCurrency(order.subtotal, order.currency))}
       ${order.discountTotal > 0 ? summaryRow("Discount", `-${formatCurrency(order.discountTotal, order.currency)}`) : ""}
       ${summaryRow("Delivery Fee", formatCurrency(order.deliveryFee, order.currency))}
-      ${order.vatAmount > 0 ? summaryRow(`VAT (${order.vatRate}%, included)`, formatCurrency(order.vatAmount, order.currency)) : ""}
       ${summaryRow("Total", formatCurrency(order.total, order.currency), true)}
     </table>
+    ${order.vatRate > 0 ? `<p style="color:#6b7280;font-size:12px;margin:0 0 24px;">VAT included in the total price.</p>` : ""}
 
     <a href="${orderUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:10px 20px;border-radius:8px;">
       Track your order
@@ -79,8 +79,8 @@ function buildText(order: OrderStatusPayload, orderUrl: string): string {
     `Subtotal: ${formatCurrency(order.subtotal, order.currency)}`,
     ...(order.discountTotal > 0 ? [`Discount: -${formatCurrency(order.discountTotal, order.currency)}`] : []),
     `Delivery Fee: ${formatCurrency(order.deliveryFee, order.currency)}`,
-    ...(order.vatAmount > 0 ? [`VAT (${order.vatRate}%, included): ${formatCurrency(order.vatAmount, order.currency)}`] : []),
     `Total: ${formatCurrency(order.total, order.currency)}`,
+    ...(order.vatRate > 0 ? [`(VAT included in the total price.)`] : []),
     ``,
     `Track your order: ${orderUrl}`,
   ].join("\n");
