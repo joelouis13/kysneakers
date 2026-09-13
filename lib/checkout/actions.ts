@@ -1,7 +1,6 @@
 "use server";
 
 import type { Currency } from "@/lib/currency/config";
-import { detectCountry } from "@/lib/currency/detect";
 import { resolveProductPrice } from "@/lib/currency/product-price";
 import { formatCurrency } from "@/lib/currency/format";
 import { convert, convertBetween, getExchangeRates, type ExchangeRates } from "@/lib/currency/rates";
@@ -260,15 +259,6 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
     return { error: `The minimum order amount is ${formatCurrency(minOrderTotal, data.currency)}.` };
   }
 
-  // VAT liability is derived from the visitor's detected location (server-side,
-  // not client-supplied — same signal the checkout UI's displayed VAT
-  // breakdown was computed from, so what's shown and what's recorded always
-  // agree). Currently only Netherlands has a configured rate; everywhere else
-  // (including Ghana) is 0. total is already VAT-inclusive by design, so this
-  // only extracts the portion already in it — it never changes the total.
-  const vatRate = getVatRate(await detectCountry());
-  const vatAmount = vatPortionOfInclusiveAmount(total, vatRate);
-
   let shippingAddressId: string | null = null;
   let shippingSnapshot: {
     recipient_name: string;
@@ -323,6 +313,16 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
       postal_code: s.postalCode ?? null,
     };
   }
+
+  // VAT liability is derived from the shipping address's country (server-
+  // recorded snapshot, not the raw client-submitted value — same string the
+  // checkout UI's displayed VAT breakdown was computed from, so what's shown
+  // and what's recorded always agree). Currently only Netherlands has a
+  // configured rate; everywhere else (including Ghana, which has no country
+  // on its shipping address) is 0. total is already VAT-inclusive by design,
+  // so this only extracts the portion already in it — it never changes the total.
+  const vatRate = getVatRate(shippingSnapshot.country ?? "");
+  const vatAmount = vatPortionOfInclusiveAmount(total, vatRate);
 
   let orderId: string | null = null;
   let orderNumber = generateOrderNumber();

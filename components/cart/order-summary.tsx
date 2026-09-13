@@ -20,6 +20,7 @@ export function OrderSummary({
   total,
   itemCount,
   actionSlot,
+  vat,
 }: {
   subtotal: number;
   discount: number;
@@ -27,9 +28,17 @@ export function OrderSummary({
   total: number;
   itemCount: number;
   actionSlot?: ReactNode;
+  /**
+   * Overrides the visitor's IP-detected VAT rate (from useCurrency) — pass
+   * this once the order's actual VAT-liable country is known from a more
+   * authoritative source, e.g. the shipping address the customer typed in
+   * checkout, so the preview matches what placeOrder will actually charge.
+   */
+  vat?: { rate: number; amount: number };
 }) {
-  const { currency, vatRate, vatPortion } = useCurrency();
-  const vatAmount = vatRate > 0 ? vatPortion(total) : 0;
+  const { currency, vatRate: detectedVatRate, vatPortion } = useCurrency();
+  const vatRate = vat?.rate ?? detectedVatRate;
+  const vatAmount = vat ? vat.amount : vatRate > 0 ? vatPortion(total) : 0;
 
   return (
     <div className="rounded-xl border border-border p-6">

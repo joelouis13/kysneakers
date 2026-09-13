@@ -31,6 +31,7 @@ import { setStashedContact } from "@/lib/checkout/session-contact";
 import { useCurrency } from "@/lib/currency/currency-context";
 import { resolveProductPrice } from "@/lib/currency/product-price";
 import { convert, convertBetween } from "@/lib/currency/rates";
+import { getVatRate, vatPortionOfInclusiveAmount } from "@/lib/currency/vat";
 import { createClient } from "@/lib/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
@@ -157,6 +158,7 @@ export function CheckoutForm() {
 
   const paymentMethod = useWatch({ control, name: "paymentMethod" });
   const deliveryMethod = useWatch({ control, name: "deliveryMethod" });
+  const shippingCountry = useWatch({ control, name: "shipping.country" });
 
   const deliveryFee =
     deliveryMethod === "delivery"
@@ -169,6 +171,12 @@ export function CheckoutForm() {
 
   const minOrderTotal = convertBetween(MIN_ORDER_TOTAL_EUR, "EUR", currency, rates);
   const belowMinimum = total < minOrderTotal;
+
+  // Mirrors placeOrder's server-side VAT computation (shipping address's
+  // country, not the visitor's IP-detected one) so this live preview matches
+  // what actually gets charged and recorded.
+  const vatRate = isGhana ? 0 : getVatRate(shippingCountry ?? "");
+  const vatAmount = vatRate > 0 ? vatPortionOfInclusiveAmount(total, vatRate) : 0;
 
   const [isNavigating, setIsNavigating] = useState(false);
 
@@ -298,6 +306,7 @@ export function CheckoutForm() {
         deliveryFee={deliveryFee}
         total={total}
         itemCount={itemCount}
+        vat={{ rate: vatRate, amount: vatAmount }}
         actionSlot={
           step === "payment" ? (
             <div className="space-y-2">
