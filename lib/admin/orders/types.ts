@@ -45,6 +45,7 @@ export type AdminOrderDetail = {
   shippingRegion: string | null;
   shippingCity: string;
   shippingStreetAddress: string;
+  shippingHouseAddress: string | null;
   shippingLandmark: string | null;
   shippingCountry: string | null;
   shippingPostalCode: string | null;

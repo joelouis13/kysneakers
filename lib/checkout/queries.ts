@@ -10,7 +10,7 @@ type Client = SupabaseClient<Database>;
 export async function getAddresses(supabase: Client) {
   const { data, error } = await supabase
     .from("addresses")
-    .select("id,label,recipient_name,phone,region,city,street_address,landmark,is_default")
+    .select("id,label,recipient_name,phone,region,city,street_address,house_address,landmark,is_default")
     .order("is_default", { ascending: false })
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -69,6 +69,8 @@ export async function getCouponPreview(
 
 const ORDER_STATUS_SELECT = `
   id, order_number, status, customer_name, customer_email, customer_phone,
+  shipping_recipient_name, shipping_phone, shipping_region, shipping_city,
+  shipping_street_address, shipping_house_address, shipping_landmark, shipping_country, shipping_postal_code,
   subtotal, discount_total, delivery_fee, total, currency, vat_rate, vat_amount, created_at,
   order_items ( product_name, size, sku, unit_price, quantity, line_total ),
   payments ( id, status, method, provider_message )
@@ -81,6 +83,15 @@ type OrderStatusRow = {
   customer_name: string;
   customer_email: string;
   customer_phone: string;
+  shipping_recipient_name: string;
+  shipping_phone: string;
+  shipping_region: string | null;
+  shipping_city: string;
+  shipping_street_address: string;
+  shipping_house_address: string | null;
+  shipping_landmark: string | null;
+  shipping_country: string | null;
+  shipping_postal_code: string | null;
   subtotal: number;
   discount_total: number;
   delivery_fee: number;
@@ -113,6 +124,17 @@ export function mapOrderStatusRow(row: OrderStatusRow): OrderStatusPayload {
     customerName: row.customer_name,
     customerEmail: row.customer_email,
     customerPhone: row.customer_phone,
+    shipping: {
+      recipientName: row.shipping_recipient_name,
+      phone: row.shipping_phone,
+      region: row.shipping_region,
+      city: row.shipping_city,
+      streetAddress: row.shipping_street_address,
+      houseAddress: row.shipping_house_address,
+      landmark: row.shipping_landmark,
+      country: row.shipping_country,
+      postalCode: row.shipping_postal_code,
+    },
     subtotal: row.subtotal,
     discountTotal: row.discount_total,
     deliveryFee: row.delivery_fee,

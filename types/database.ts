@@ -185,12 +185,13 @@ export interface Database {
           region: string;
           city: string;
           street_address: string;
+          house_address: string | null;
           landmark: string | null;
           is_default: boolean;
           created_at: string;
           updated_at: string;
         },
-        "id" | "label" | "landmark" | "is_default" | "created_at" | "updated_at"
+        "id" | "label" | "house_address" | "landmark" | "is_default" | "created_at" | "updated_at"
       >;
       shipping_zones: Table<
         {
@@ -278,6 +279,7 @@ export interface Database {
           shipping_region: string | null;
           shipping_city: string;
           shipping_street_address: string;
+          shipping_house_address: string | null;
           shipping_landmark: string | null;
           shipping_country: string | null;
           shipping_postal_code: string | null;
@@ -299,6 +301,7 @@ export interface Database {
         | "shipping_address_id"
         | "shipping_zone_id"
         | "shipping_region"
+        | "shipping_house_address"
         | "shipping_landmark"
         | "shipping_country"
         | "shipping_postal_code"

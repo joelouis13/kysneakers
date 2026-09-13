@@ -67,7 +67,8 @@ export default async function AdminOrderDetailPage({
           <p className="text-sm text-foreground">{order.shippingRecipientName}</p>
           <p className="text-sm text-muted-foreground">{order.shippingPhone}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {order.shippingStreetAddress}, {order.shippingCity},{" "}
+            {order.shippingStreetAddress}
+            {order.shippingHouseAddress ? `, ${order.shippingHouseAddress}` : ""}, {order.shippingCity},{" "}
             {order.shippingRegion ?? order.shippingCountry}
             {order.shippingPostalCode ? ` ${order.shippingPostalCode}` : ""}
           </p>

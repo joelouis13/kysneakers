@@ -37,6 +37,18 @@ export type OrderPaymentSummary = {
   providerMessage: string | null;
 };
 
+export type OrderShippingSummary = {
+  recipientName: string;
+  phone: string;
+  region: string | null;
+  city: string;
+  streetAddress: string;
+  houseAddress: string | null;
+  landmark: string | null;
+  country: string | null;
+  postalCode: string | null;
+};
+
 export type OrderStatusPayload = {
   orderId: string;
   orderNumber: string;
@@ -44,6 +56,7 @@ export type OrderStatusPayload = {
   customerName: string;
   customerEmail: string;
   customerPhone: string;
+  shipping: OrderShippingSummary;
   subtotal: number;
   discountTotal: number;
   deliveryFee: number;

@@ -1,5 +1,5 @@
 import { formatCurrency } from "@/lib/currency/format";
-import type { OrderStatusPayload } from "@/lib/checkout/types";
+import type { OrderShippingSummary, OrderStatusPayload } from "@/lib/checkout/types";
 
 import { getFromEmail } from "./config";
 import { getResendClient } from "./client";
@@ -10,6 +10,21 @@ function escapeHtml(value: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+/** One readable line: house/street address, landmark, city/region/country — whichever apply. */
+function formatShippingAddressLine(shipping: OrderShippingSummary): string {
+  return [
+    shipping.houseAddress,
+    shipping.streetAddress,
+    shipping.landmark ? `near ${shipping.landmark}` : null,
+    shipping.city,
+    shipping.region,
+    shipping.country,
+    shipping.postalCode,
+  ]
+    .filter((part): part is string => !!part)
+    .join(", ");
 }
 
 function buildHtml(order: OrderStatusPayload, orderUrl: string): string {
@@ -53,6 +68,14 @@ function buildHtml(order: OrderStatusPayload, orderUrl: string): string {
     </table>
     ${order.vatRate > 0 ? `<p style="color:#6b7280;font-size:12px;margin:0 0 24px;">VAT included in the total price.</p>` : ""}
 
+    <div style="margin-bottom:24px;">
+      <p style="margin:0 0 4px;color:#111827;font-size:14px;font-weight:600;">Shipping to</p>
+      <p style="margin:0;color:#4b5563;font-size:14px;">
+        ${escapeHtml(order.shipping.recipientName)} · ${escapeHtml(order.shipping.phone)}<br/>
+        ${escapeHtml(formatShippingAddressLine(order.shipping))}
+      </p>
+    </div>
+
     <a href="${orderUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:10px 20px;border-radius:8px;">
       Track your order
     </a>
@@ -81,6 +104,9 @@ function buildText(order: OrderStatusPayload, orderUrl: string): string {
     `Delivery Fee: ${formatCurrency(order.deliveryFee, order.currency)}`,
     `Total: ${formatCurrency(order.total, order.currency)}`,
     ...(order.vatRate > 0 ? [`(VAT included in the total price.)`] : []),
+    ``,
+    `Shipping to: ${order.shipping.recipientName} · ${order.shipping.phone}`,
+    formatShippingAddressLine(order.shipping),
     ``,
     `Track your order: ${orderUrl}`,
   ].join("\n");
@@ -137,6 +163,14 @@ function buildStaffHtml(order: OrderStatusPayload, adminOrderUrl: string): strin
       <tr><td style="padding:4px 0;color:#4b5563;font-size:14px;">Phone</td><td style="padding:4px 0;text-align:right;color:#111827;font-size:14px;">${escapeHtml(order.customerPhone)}</td></tr>
     </table>
 
+    <div style="margin-bottom:24px;">
+      <p style="margin:0 0 4px;color:#111827;font-size:14px;font-weight:600;">Shipping Address</p>
+      <p style="margin:0;color:#4b5563;font-size:14px;">
+        ${escapeHtml(order.shipping.recipientName)} · ${escapeHtml(order.shipping.phone)}<br/>
+        ${escapeHtml(formatShippingAddressLine(order.shipping))}
+      </p>
+    </div>
+
     <table style="width:100%;border-collapse:collapse;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;margin-bottom:24px;">
       ${rows}
     </table>
@@ -160,6 +194,9 @@ function buildStaffText(order: OrderStatusPayload, adminOrderUrl: string): strin
     `Customer: ${order.customerName}`,
     `Email: ${order.customerEmail}`,
     `Phone: ${order.customerPhone}`,
+    ``,
+    `Shipping to: ${order.shipping.recipientName} · ${order.shipping.phone}`,
+    formatShippingAddressLine(order.shipping),
     ``,
     ...lines,
     ``,

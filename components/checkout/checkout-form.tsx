@@ -412,7 +412,8 @@ export function CheckoutForm() {
                       >
                         <p className="font-medium">{addr.label}</p>
                         <p className="text-[11px] opacity-80">
-                          {addr.street_address}, {addr.city}
+                          {addr.street_address}
+                          {addr.house_address ? `, ${addr.house_address}` : ""}, {addr.city}
                         </p>
                       </button>
                     ))}
@@ -466,6 +467,13 @@ export function CheckoutForm() {
                       <Input
                         aria-invalid={!!errors.shipping?.streetAddress}
                         {...register("shipping.streetAddress")}
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label className="mb-1.5">House Address</Label>
+                      <Input
+                        aria-invalid={!!errors.shipping?.houseAddress}
+                        {...register("shipping.houseAddress")}
                       />
                     </div>
                     {!isGhana && (

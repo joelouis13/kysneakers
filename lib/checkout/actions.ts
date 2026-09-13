@@ -266,6 +266,7 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
     region: string | null;
     city: string;
     street_address: string;
+    house_address: string | null;
     landmark: string | null;
     country: string | null;
     postal_code: string | null;
@@ -287,6 +288,7 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
       region: addr.region,
       city: addr.city,
       street_address: addr.street_address,
+      house_address: addr.house_address,
       landmark: addr.landmark,
       country: null,
       postal_code: null,
@@ -308,6 +310,7 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
       region: s.region ?? null,
       city: s.city,
       street_address: s.streetAddress,
+      house_address: s.houseAddress ?? null,
       landmark: s.landmark ?? null,
       country: s.country ?? null,
       postal_code: s.postalCode ?? null,
@@ -342,6 +345,7 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
         shipping_region: shippingSnapshot.region,
         shipping_city: shippingSnapshot.city,
         shipping_street_address: shippingSnapshot.street_address,
+        shipping_house_address: shippingSnapshot.house_address,
         shipping_landmark: shippingSnapshot.landmark,
         shipping_country: shippingSnapshot.country,
         shipping_postal_code: shippingSnapshot.postal_code,
@@ -391,6 +395,7 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
       region: shippingSnapshot.region ?? "",
       city: shippingSnapshot.city,
       street_address: shippingSnapshot.street_address,
+      house_address: shippingSnapshot.house_address,
       landmark: shippingSnapshot.landmark,
       is_default: (count ?? 0) === 0,
     });
@@ -455,6 +460,17 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
     customerName: data.customerName,
     customerEmail: data.customerEmail,
     customerPhone: data.customerPhone,
+    shipping: {
+      recipientName: shippingSnapshot.recipient_name,
+      phone: shippingSnapshot.phone,
+      region: shippingSnapshot.region,
+      city: shippingSnapshot.city,
+      streetAddress: shippingSnapshot.street_address,
+      houseAddress: shippingSnapshot.house_address,
+      landmark: shippingSnapshot.landmark,
+      country: shippingSnapshot.country,
+      postalCode: shippingSnapshot.postal_code,
+    },
     subtotal,
     discountTotal,
     deliveryFee,

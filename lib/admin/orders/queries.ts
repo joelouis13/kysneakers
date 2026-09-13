@@ -56,7 +56,7 @@ export async function listAdminOrders(
 
 const DETAIL_SELECT = `
   id, order_number, status, profile_id, customer_name, customer_email, customer_phone,
-  shipping_recipient_name, shipping_phone, shipping_region, shipping_city, shipping_street_address, shipping_landmark,
+  shipping_recipient_name, shipping_phone, shipping_region, shipping_city, shipping_street_address, shipping_house_address, shipping_landmark,
   shipping_country, shipping_postal_code,
   subtotal, discount_total, delivery_fee, total, currency, vat_rate, vat_amount, notes, created_at,
   items:order_items ( product_name, size, sku, unit_price, quantity, line_total ),
@@ -76,6 +76,7 @@ type DetailRow = {
   shipping_region: string | null;
   shipping_city: string;
   shipping_street_address: string;
+  shipping_house_address: string | null;
   shipping_landmark: string | null;
   shipping_country: string | null;
   shipping_postal_code: string | null;
@@ -120,6 +121,7 @@ export async function getAdminOrderById(supabase: Client, id: string): Promise<A
     shippingRegion: row.shipping_region,
     shippingCity: row.shipping_city,
     shippingStreetAddress: row.shipping_street_address,
+    shippingHouseAddress: row.shipping_house_address,
     shippingLandmark: row.shipping_landmark,
     shippingCountry: row.shipping_country,
     shippingPostalCode: row.shipping_postal_code,

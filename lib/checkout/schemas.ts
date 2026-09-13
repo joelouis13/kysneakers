@@ -10,6 +10,7 @@ const shippingSchema = z
     region: z.string().optional(),
     city: z.string().min(2, "Enter a city").optional(),
     streetAddress: z.string().min(4, "Enter a street address").optional(),
+    houseAddress: z.string().optional(),
     landmark: z.string().optional(),
     country: z.string().optional(),
     postalCode: z.string().optional(),
