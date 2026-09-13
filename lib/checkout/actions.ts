@@ -3,6 +3,7 @@
 import type { Currency } from "@/lib/currency/config";
 import { detectCountry } from "@/lib/currency/detect";
 import { resolveProductPrice } from "@/lib/currency/product-price";
+import { formatCurrency } from "@/lib/currency/format";
 import { convert, convertBetween, getExchangeRates, type ExchangeRates } from "@/lib/currency/rates";
 import { getVatRate, vatPortionOfInclusiveAmount } from "@/lib/currency/vat";
 import { channelForMethod, initiatePayment } from "@/lib/moolre/client";
@@ -14,7 +15,7 @@ import { createServiceRoleClient, createClient } from "@/lib/supabase/server";
 import { getProductsBySlugs } from "@/lib/catalog/queries";
 import type { PaymentMethod, PaymentStatus } from "@/types/database";
 
-import { FLAT_DELIVERY_FEE, FLAT_INTERNATIONAL_DELIVERY_FEE_USD } from "./constants";
+import { FLAT_DELIVERY_FEE, FLAT_INTERNATIONAL_DELIVERY_FEE_USD, MIN_ORDER_TOTAL_EUR } from "./constants";
 import { generateOrderNumber } from "./order-number";
 import { getOrderById, getOrderByNumber } from "./queries";
 import {
@@ -228,9 +229,9 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
         : Math.min(coupon.discount_value, subtotalGhs);
   }
 
-  // Rates only needed once we're converting out of GHS.
-  let rates: ExchangeRates | null = null;
-  if (!isGhana) rates = await getExchangeRates();
+  // Needed for conversions out of GHS, and for the USD-denominated minimum
+  // order check below regardless of currency.
+  const rates: ExchangeRates = await getExchangeRates();
 
   const deliveryFeeGhs =
     data.deliveryMethod === "pickup"
@@ -253,6 +254,11 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
   const discountTotal = isGhana ? discountTotalGhs : convert(discountTotalGhs, data.currency, rates!);
   const deliveryFee = isGhana ? deliveryFeeGhs : convert(deliveryFeeGhs, data.currency, rates!);
   const total = Math.max(0, subtotal - discountTotal) + deliveryFee;
+
+  const minOrderTotal = convertBetween(MIN_ORDER_TOTAL_EUR, "EUR", data.currency, rates);
+  if (total < minOrderTotal) {
+    return { error: `The minimum order amount is ${formatCurrency(minOrderTotal, data.currency)}.` };
+  }
 
   // VAT liability is derived from the visitor's detected location (server-side,
   // not client-supplied — same signal the checkout UI's displayed VAT

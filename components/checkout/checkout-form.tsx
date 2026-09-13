@@ -23,7 +23,7 @@ import type { ProductDetail } from "@/lib/catalog/types";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useCart } from "@/lib/cart/cart-context";
 import { placeOrder } from "@/lib/checkout/actions";
-import { FLAT_DELIVERY_FEE, FLAT_INTERNATIONAL_DELIVERY_FEE_USD } from "@/lib/checkout/constants";
+import { FLAT_DELIVERY_FEE, FLAT_INTERNATIONAL_DELIVERY_FEE_USD, MIN_ORDER_TOTAL_EUR } from "@/lib/checkout/constants";
 import { getAddresses } from "@/lib/checkout/queries";
 import { checkoutSchema, type CheckoutValues } from "@/lib/checkout/schemas";
 import { useCouponPreview } from "@/lib/checkout/hooks";
@@ -60,7 +60,7 @@ function useOwnAddresses() {
 export function CheckoutForm() {
   const router = useRouter();
   const { user } = useAuth();
-  const { currency, isGhana, rates, formatPrice, formatFromUsd } = useCurrency();
+  const { currency, isGhana, rates, formatPrice, formatFromUsd, formatFromEur } = useCurrency();
   const { activeItems, couponCode } = useCart();
   const { data: addresses } = useOwnAddresses();
 
@@ -166,6 +166,9 @@ export function CheckoutForm() {
         : 0;
   const total = Math.max(0, subtotal - discount) + deliveryFee;
   const itemCount = activeItems.reduce((sum, i) => sum + i.quantity, 0);
+
+  const minOrderTotal = convertBetween(MIN_ORDER_TOTAL_EUR, "EUR", currency, rates);
+  const belowMinimum = total < minOrderTotal;
 
   const [isNavigating, setIsNavigating] = useState(false);
 
@@ -297,10 +300,23 @@ export function CheckoutForm() {
         itemCount={itemCount}
         actionSlot={
           step === "payment" ? (
-            <Button type="submit" size="lg" variant="secondary" className="w-full" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-              {isSubmitting ? "Placing Order..." : isGhana ? "Place Order" : "Continue to Payment"}
-            </Button>
+            <div className="space-y-2">
+              {belowMinimum && (
+                <p className="text-xs text-destructive">
+                  Minimum order amount is {formatFromEur(MIN_ORDER_TOTAL_EUR)}. Add more items to your cart to continue.
+                </p>
+              )}
+              <Button
+                type="submit"
+                size="lg"
+                variant="secondary"
+                className="w-full"
+                disabled={isSubmitting || belowMinimum}
+              >
+                {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+                {isSubmitting ? "Placing Order..." : isGhana ? "Place Order" : "Continue to Payment"}
+              </Button>
+            </div>
           ) : (
             <Button
               type="button"

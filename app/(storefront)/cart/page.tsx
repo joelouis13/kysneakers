@@ -14,7 +14,7 @@ import { DeliveryMethodSelect, type DeliveryMethod } from "@/components/checkout
 import { useProductsBySlugs } from "@/lib/catalog/hooks";
 import type { ProductDetail } from "@/lib/catalog/types";
 import { useCart } from "@/lib/cart/cart-context";
-import { FLAT_DELIVERY_FEE, FLAT_INTERNATIONAL_DELIVERY_FEE_USD } from "@/lib/checkout/constants";
+import { FLAT_DELIVERY_FEE, FLAT_INTERNATIONAL_DELIVERY_FEE_USD, MIN_ORDER_TOTAL_EUR } from "@/lib/checkout/constants";
 import { useCouponPreview } from "@/lib/checkout/hooks";
 import { useCurrency } from "@/lib/currency/currency-context";
 import { convert, convertBetween } from "@/lib/currency/rates";
@@ -24,7 +24,7 @@ export default function CartPage() {
   const router = useRouter();
   const { items, activeItems, savedItems, couponCode } = useCart();
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("delivery");
-  const { currency, isGhana, rates, formatFromUsd } = useCurrency();
+  const { currency, isGhana, rates, formatFromUsd, formatFromEur } = useCurrency();
 
   const slugs = useMemo(() => [...new Set(items.map((i) => i.productSlug))], [items]);
   const { data: products, isLoading } = useProductsBySlugs(slugs);
@@ -73,6 +73,8 @@ export default function CartPage() {
         : convertBetween(FLAT_INTERNATIONAL_DELIVERY_FEE_USD, "USD", currency, rates);
   const total = Math.max(0, subtotal - discount) + deliveryFee;
   const itemCount = activeItems.reduce((sum, i) => sum + i.quantity, 0);
+  const minOrderTotal = convertBetween(MIN_ORDER_TOTAL_EUR, "EUR", currency, rates);
+  const belowMinimum = activeItems.length > 0 && total < minOrderTotal;
 
   if (items.length === 0) {
     return (
@@ -171,9 +173,22 @@ export default function CartPage() {
             total={total}
             itemCount={itemCount}
             actionSlot={
-              <Button size="lg" variant="secondary" className="w-full" onClick={() => router.push("/checkout")}>
-                Proceed to Checkout
-              </Button>
+              <div className="space-y-2">
+                {belowMinimum && (
+                  <p className="text-xs text-destructive">
+                    Minimum order amount is {formatFromEur(MIN_ORDER_TOTAL_EUR)}. Add more items to continue.
+                  </p>
+                )}
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  className="w-full"
+                  disabled={belowMinimum}
+                  onClick={() => router.push("/checkout")}
+                >
+                  Proceed to Checkout
+                </Button>
+              </div>
             }
           />
         </div>

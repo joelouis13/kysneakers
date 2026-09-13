@@ -19,6 +19,8 @@ type CurrencyContextValue = {
   convertFromGhs: (amountInGhs: number) => number;
   /** Takes a USD-denominated amount (e.g. the flat international shipping fee), returns it formatted in the visitor's currency. */
   formatFromUsd: (amountInUsd: number) => string;
+  /** Takes a EUR-denominated amount (e.g. the minimum order total), returns it formatted in the visitor's currency. */
+  formatFromEur: (amountInEur: number) => string;
   /** VAT already included in `grossAmount` (display currency), for the "Includes VAT: X" breakdown line — doesn't change the total. */
   vatPortion: (grossAmount: number) => number;
   /**
@@ -53,6 +55,8 @@ export function CurrencyProvider({
       convertFromGhs: (amountInGhs: number) => convert(amountInGhs, currency, rates),
       formatFromUsd: (amountInUsd: number) =>
         formatCurrency(convertBetween(amountInUsd, "USD", currency, rates), currency),
+      formatFromEur: (amountInEur: number) =>
+        formatCurrency(convertBetween(amountInEur, "EUR", currency, rates), currency),
       vatPortion: (grossAmount: number) => vatPortionOfInclusiveAmount(grossAmount, vatRate),
       formatPrice: (ghsAmount: number, eurAmount: number | null) =>
         currency === "EUR" && eurAmount != null
