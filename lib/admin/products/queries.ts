@@ -17,7 +17,7 @@ export type AdminProductFilters = {
 
 const LIST_SELECT = `
   id, sku, name, slug, status, regular_price, sale_price, eur_regular_price, eur_sale_price,
-  is_featured, is_new_arrival, is_on_sale, deleted_at, created_at,
+  is_featured, is_new_arrival, is_on_sale, is_flash_sale, is_international_only, deleted_at, created_at,
   brand:brands ( name ),
   category:categories ( name ),
   images:product_images ( url, is_featured, display_order ),
@@ -37,6 +37,8 @@ type ListRow = {
   is_featured: boolean;
   is_new_arrival: boolean;
   is_on_sale: boolean;
+  is_flash_sale: boolean;
+  is_international_only: boolean;
   deleted_at: string | null;
   created_at: string;
   brand: { name: string } | null;
@@ -63,6 +65,8 @@ function mapListRow(row: ListRow): AdminProductListItem {
     isFeatured: row.is_featured,
     isNewArrival: row.is_new_arrival,
     isOnSale: row.is_on_sale,
+    isFlashSale: row.is_flash_sale,
+    isInternationalOnly: row.is_international_only,
     brandName: row.brand?.name ?? null,
     categoryName: row.category?.name ?? null,
     primaryImageUrl: primary?.url ?? null,
@@ -100,7 +104,7 @@ export async function listAdminProducts(
 const DETAIL_SELECT = `
   id, sku, name, slug, description, brand_id, category_id,
   regular_price, sale_price, eur_regular_price, eur_sale_price, weight_grams, tags,
-  is_featured, is_new_arrival, is_on_sale, status, seo_title, seo_description,
+  is_featured, is_new_arrival, is_on_sale, is_flash_sale, is_international_only, status, seo_title, seo_description,
   images:product_images ( id, url, display_order, is_featured ),
   sizes:product_sizes ( id, size, inventory ( id, quantity, low_stock_threshold ) )
 `;
@@ -122,6 +126,8 @@ type DetailRow = {
   is_featured: boolean;
   is_new_arrival: boolean;
   is_on_sale: boolean;
+  is_flash_sale: boolean;
+  is_international_only: boolean;
   status: ProductStatus;
   seo_title: string | null;
   seo_description: string | null;
@@ -159,6 +165,8 @@ export async function getAdminProductById(
     isFeatured: row.is_featured,
     isNewArrival: row.is_new_arrival,
     isOnSale: row.is_on_sale,
+    isFlashSale: row.is_flash_sale,
+    isInternationalOnly: row.is_international_only,
     status: row.status,
     seoTitle: row.seo_title,
     seoDescription: row.seo_description,

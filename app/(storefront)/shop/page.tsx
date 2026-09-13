@@ -16,6 +16,7 @@ import { ProductSearchInput } from "@/components/shop/product-search-input";
 import { SortSelect } from "@/components/shop/sort-select";
 import { parseProductSearchParams } from "@/lib/catalog/search-params";
 import { queryProducts } from "@/lib/catalog/queries";
+import { isGhanaVisitor } from "@/lib/currency/detect";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -33,7 +34,8 @@ export default async function ShopPage({
 }) {
   const sp = await searchParams;
   const supabase = await createClient();
-  const result = await queryProducts(supabase, parseProductSearchParams(sp));
+  const isGhana = await isGhanaVisitor();
+  const result = await queryProducts(supabase, { ...parseProductSearchParams(sp), isGhana });
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">

@@ -36,6 +36,7 @@ function mapSummaryRow(row: SearchProductsRow): ProductSummary {
     isFeatured: row.is_featured,
     isNewArrival: row.is_new_arrival,
     isOnSale: row.is_on_sale,
+    isFlashSale: row.is_flash_sale,
     totalStock: row.total_stock,
     sku: row.sku,
     description: row.description,
@@ -74,10 +75,12 @@ export async function queryProducts(
     isFeatured,
     isNewArrival,
     isOnSale,
+    isFlashSale,
     excludeId,
     sort = "newest",
     page = 1,
     perPage = DEFAULT_PER_PAGE,
+    isGhana = false,
   } = params;
 
   const { data, error } = await supabase.rpc("search_products", {
@@ -91,10 +94,12 @@ export async function queryProducts(
     p_is_featured: isFeatured ?? null,
     p_is_new_arrival: isNewArrival ?? null,
     p_is_on_sale: isOnSale ?? null,
+    p_is_flash_sale: isFlashSale ?? null,
     p_exclude_id: excludeId ?? null,
     p_sort: sort,
     p_limit: perPage,
     p_offset: (Math.max(1, page) - 1) * perPage,
+    p_is_ghana: isGhana,
   });
   if (error) throw error;
 
@@ -115,21 +120,25 @@ export async function queryProducts(
   };
 }
 
-export async function getFeaturedProducts(supabase: Client, perPage = 8) {
-  return (await queryProducts(supabase, { isFeatured: true, sort: "newest", perPage })).products;
+export async function getFeaturedProducts(supabase: Client, perPage = 8, isGhana = false) {
+  return (await queryProducts(supabase, { isFeatured: true, sort: "newest", perPage, isGhana })).products;
 }
 
-export async function getNewArrivals(supabase: Client, perPage = 8) {
-  return (await queryProducts(supabase, { isNewArrival: true, sort: "newest", perPage })).products;
+export async function getNewArrivals(supabase: Client, perPage = 8, isGhana = false) {
+  return (await queryProducts(supabase, { isNewArrival: true, sort: "newest", perPage, isGhana })).products;
 }
 
-export async function getOnSaleProducts(supabase: Client, perPage = 8) {
-  return (await queryProducts(supabase, { isOnSale: true, sort: "newest", perPage })).products;
+export async function getOnSaleProducts(supabase: Client, perPage = 8, isGhana = false) {
+  return (await queryProducts(supabase, { isOnSale: true, sort: "newest", perPage, isGhana })).products;
+}
+
+export async function getFlashSaleProducts(supabase: Client, perPage = 8, isGhana = false) {
+  return (await queryProducts(supabase, { isFlashSale: true, sort: "newest", perPage, isGhana })).products;
 }
 
 /** No real order history yet — "popular" ranks by real review count. */
-export async function getBestSellers(supabase: Client, perPage = 8) {
-  return (await queryProducts(supabase, { sort: "popular", perPage })).products;
+export async function getBestSellers(supabase: Client, perPage = 8, isGhana = false) {
+  return (await queryProducts(supabase, { sort: "popular", perPage, isGhana })).products;
 }
 
 export async function getBrands(supabase: Client): Promise<ProductBrand[]> {
@@ -236,7 +245,7 @@ export async function getCatalogFacets(supabase: Client): Promise<CatalogFacets>
 
 const PRODUCT_DETAIL_SELECT = `
   id, sku, name, slug, description, tags,
-  regular_price, sale_price, eur_regular_price, eur_sale_price, is_featured, is_new_arrival, is_on_sale,
+  regular_price, sale_price, eur_regular_price, eur_sale_price, is_featured, is_new_arrival, is_on_sale, is_flash_sale,
   brand:brands ( id, name, slug ),
   category:categories ( id, name, slug ),
   images:product_images ( id, url, display_order, is_featured ),
@@ -257,6 +266,7 @@ type ProductDetailRow = {
   is_featured: boolean;
   is_new_arrival: boolean;
   is_on_sale: boolean;
+  is_flash_sale: boolean;
   brand: ProductBrand | null;
   category: ProductCategoryRef | null;
   images: { id: string; url: string; display_order: number; is_featured: boolean }[];
@@ -316,6 +326,7 @@ function mapDetailRow(
     isFeatured: row.is_featured,
     isNewArrival: row.is_new_arrival,
     isOnSale: row.is_on_sale,
+    isFlashSale: row.is_flash_sale,
     totalStock,
     sku: row.sku,
     description: row.description,
@@ -366,13 +377,15 @@ export async function getProductsBySlugs(supabase: Client, slugs: string[]): Pro
 export async function getRelatedProducts(
   supabase: Client,
   product: ProductDetail,
-  limit = 4
+  limit = 4,
+  isGhana = false
 ): Promise<ProductSummary[]> {
   if (!product.category) return [];
   const { products } = await queryProducts(supabase, {
     category: [product.category.slug],
     excludeId: product.id,
     perPage: limit,
+    isGhana,
   });
   return products;
 }

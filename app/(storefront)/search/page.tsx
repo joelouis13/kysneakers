@@ -7,6 +7,7 @@ import { SortSelect } from "@/components/shop/sort-select";
 import { parseProductSearchParams } from "@/lib/catalog/search-params";
 import { queryProducts } from "@/lib/catalog/queries";
 import type { ProductQueryResult } from "@/lib/catalog/types";
+import { isGhanaVisitor } from "@/lib/currency/detect";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -27,7 +28,8 @@ export default async function SearchPage({
   let result: ProductQueryResult = { products: [], total: 0, page: 1, perPage: 12, totalPages: 1 };
   if (query) {
     const supabase = await createClient();
-    result = await queryProducts(supabase, parseProductSearchParams(sp));
+    const isGhana = await isGhanaVisitor();
+    result = await queryProducts(supabase, { ...parseProductSearchParams(sp), isGhana });
   }
 
   return (

@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { createProduct, updateProduct } from "@/lib/admin/products/actions";
-import { productFormSchema, type ProductFormValues } from "@/lib/admin/products/schemas";
+import { buildProductFormSchema, type ProductFormValues } from "@/lib/admin/products/schemas";
 import type { AdminProductDetail } from "@/lib/admin/products/types";
 import type { ProductBrand, ProductCategoryRef } from "@/lib/catalog/types";
 import { slugify } from "@/lib/catalog/slugify";
@@ -40,7 +40,7 @@ function defaultValuesFor(product?: AdminProductDetail): ProductFormValues {
       description: "",
       brandId: "",
       categoryId: "",
-      regularPrice: 0,
+      regularPrice: undefined,
       isOnSale: false,
       salePrice: undefined,
       eurRegularPrice: undefined,
@@ -49,6 +49,8 @@ function defaultValuesFor(product?: AdminProductDetail): ProductFormValues {
       tags: "",
       isFeatured: false,
       isNewArrival: false,
+      isFlashSale: false,
+      isInternationalOnly: false,
       status: "draft",
       seoTitle: "",
       seoDescription: "",
@@ -71,6 +73,8 @@ function defaultValuesFor(product?: AdminProductDetail): ProductFormValues {
     tags: product.tags.join(", "),
     isFeatured: product.isFeatured,
     isNewArrival: product.isNewArrival,
+    isFlashSale: product.isFlashSale,
+    isInternationalOnly: product.isInternationalOnly,
     status: product.status,
     seoTitle: product.seoTitle ?? "",
     seoDescription: product.seoDescription ?? "",
@@ -95,6 +99,11 @@ export function ProductForm({
   categories: ProductCategoryRef[];
 }) {
   const router = useRouter();
+  const perfumeCategoryId = useMemo(
+    () => categories.find((c) => c.slug === "perfumes")?.id ?? null,
+    [categories]
+  );
+  const schema = useMemo(() => buildProductFormSchema(perfumeCategoryId), [perfumeCategoryId]);
   const [slugTouched, setSlugTouched] = useState(mode === "edit");
   const [images, setImages] = useState<ImageDraft[]>(
     () =>
@@ -113,13 +122,15 @@ export function ProductForm({
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<ProductFormValues>({
-    resolver: zodResolver(productFormSchema),
+    resolver: zodResolver(schema),
     defaultValues: defaultValuesFor(initialProduct),
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "sizes" });
   const isOnSale = useWatch({ control, name: "isOnSale" });
   const name = useWatch({ control, name: "name" });
+  const categoryId = useWatch({ control, name: "categoryId" });
+  const isPerfumeCategory = perfumeCategoryId !== null && categoryId === perfumeCategoryId;
 
   useEffect(() => {
     if (!slugTouched && name) {
@@ -215,15 +226,19 @@ export function ProductForm({
         <h2 className="mb-3 font-heading text-xl tracking-wide text-foreground">Pricing</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <Label className="mb-1.5">Regular Price (GHS)</Label>
+            <Label className="mb-1.5">Regular Price (GHS, optional)</Label>
             <Input
               type="number"
               step="0.01"
               aria-invalid={!!errors.regularPrice}
-              {...register("regularPrice", { valueAsNumber: true })}
+              {...register("regularPrice", { setValueAs: optionalNumber })}
             />
-            {errors.regularPrice && (
+            {errors.regularPrice ? (
               <p className="mt-1.5 text-xs text-destructive">{errors.regularPrice.message}</p>
+            ) : (
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Leave blank to auto-convert from EUR at the current exchange rate.
+              </p>
             )}
           </div>
           <div>
@@ -293,6 +308,11 @@ export function ProductForm({
 
       <section>
         <h2 className="mb-3 font-heading text-xl tracking-wide text-foreground">Sizes &amp; Stock</h2>
+        {isPerfumeCategory && (
+          <p className="mb-2 text-xs text-muted-foreground">
+            Optional for Perfumes — remove all sizes for a single-variant fragrance.
+          </p>
+        )}
         <div className="space-y-2">
           {fields.map((field, index) => (
             <div key={field.id} className="flex items-end gap-2">
@@ -321,7 +341,7 @@ export function ProductForm({
                 variant="outline"
                 size="sm"
                 onClick={() => remove(index)}
-                disabled={fields.length === 1}
+                disabled={fields.length === 1 && !isPerfumeCategory}
               >
                 Remove
               </Button>
@@ -370,6 +390,29 @@ export function ProductForm({
               New Arrival
             </Label>
           </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="isFlashSale"
+              onCheckedChange={(checked) => setValue("isFlashSale", checked === true)}
+              defaultChecked={initialProduct?.isFlashSale}
+            />
+            <Label htmlFor="isFlashSale" className="font-normal">
+              Flash Sales
+            </Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="isInternationalOnly"
+              onCheckedChange={(checked) => setValue("isInternationalOnly", checked === true)}
+              defaultChecked={initialProduct?.isInternationalOnly}
+            />
+            <Label htmlFor="isInternationalOnly" className="font-normal">
+              International Only
+            </Label>
+          </div>
+          <p className="-mt-2 text-xs text-muted-foreground sm:col-span-2">
+            Hides this product from Ghana visitors — it&apos;ll only show for international (EUR/USD/GBP) shoppers.
+          </p>
           <div>
             <Label className="mb-1.5">Tags (comma-separated)</Label>
             <Input {...register("tags")} />

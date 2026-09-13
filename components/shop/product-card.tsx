@@ -124,6 +124,7 @@ export function ProductCard({
             <div className="flex gap-1.5">
               {product.isOnSale && <Badge variant="sale">Sale</Badge>}
               {product.isNewArrival && <Badge variant="secondary">New</Badge>}
+              {product.isFlashSale && <Badge variant="default">Flash Sale</Badge>}
             </div>
           </div>
         </div>
@@ -156,6 +157,7 @@ export function ProductCard({
         <div className="absolute left-3 top-3 flex flex-col gap-1.5">
           {product.isOnSale && <Badge variant="sale">Sale</Badge>}
           {product.isNewArrival && <Badge variant="secondary">New</Badge>}
+          {product.isFlashSale && <Badge variant="default">Flash Sale</Badge>}
         </div>
 
         {outOfStock && (

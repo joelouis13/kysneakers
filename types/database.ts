@@ -113,6 +113,8 @@ export interface Database {
           is_featured: boolean;
           is_new_arrival: boolean;
           is_on_sale: boolean;
+          is_flash_sale: boolean;
+          is_international_only: boolean;
           status: ProductStatus;
           seo_title: string | null;
           seo_description: string | null;
@@ -135,6 +137,8 @@ export interface Database {
         | "is_featured"
         | "is_new_arrival"
         | "is_on_sale"
+        | "is_flash_sale"
+        | "is_international_only"
         | "status"
         | "seo_title"
         | "seo_description"
@@ -442,11 +446,13 @@ export interface Database {
           p_is_featured?: boolean | null;
           p_is_new_arrival?: boolean | null;
           p_is_on_sale?: boolean | null;
+          p_is_flash_sale?: boolean | null;
           p_exclude_id?: string | null;
           p_status?: string | null;
           p_sort?: string | null;
           p_limit?: number | null;
           p_offset?: number | null;
+          p_is_ghana?: boolean | null;
         };
         Returns: {
           id: string;
@@ -469,6 +475,7 @@ export interface Database {
           is_featured: boolean;
           is_new_arrival: boolean;
           is_on_sale: boolean;
+          is_flash_sale: boolean;
           tags: string[];
           created_at: string;
           primary_image_url: string | null;

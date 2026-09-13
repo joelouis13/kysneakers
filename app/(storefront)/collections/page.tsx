@@ -7,6 +7,7 @@ import {
   getNewArrivals,
   getOnSaleProducts,
 } from "@/lib/catalog/queries";
+import { isGhanaVisitor } from "@/lib/currency/detect";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -16,11 +17,12 @@ export const metadata: Metadata = {
 
 export default async function CollectionsPage() {
   const supabase = await createClient();
+  const isGhana = await isGhanaVisitor();
   const [featured, newArrivals, bestSellers, onSale] = await Promise.all([
-    getFeaturedProducts(supabase),
-    getNewArrivals(supabase),
-    getBestSellers(supabase),
-    getOnSaleProducts(supabase),
+    getFeaturedProducts(supabase, 8, isGhana),
+    getNewArrivals(supabase, 8, isGhana),
+    getBestSellers(supabase, 8, isGhana),
+    getOnSaleProducts(supabase, 8, isGhana),
   ]);
 
   return (

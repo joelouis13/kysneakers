@@ -19,6 +19,7 @@ export type ProductCardData = {
   isFeatured: boolean;
   isNewArrival: boolean;
   isOnSale: boolean;
+  isFlashSale: boolean;
   totalStock: number;
 };
 
@@ -61,10 +62,13 @@ export type ProductQueryParams = {
   isFeatured?: boolean;
   isNewArrival?: boolean;
   isOnSale?: boolean;
+  isFlashSale?: boolean;
   excludeId?: string;
   sort?: ProductSortOption;
   page?: number;
   perPage?: number;
+  /** Excludes "International Only" products when true — pass the visitor's detected market, not a product filter the UI exposes. */
+  isGhana?: boolean;
 };
 
 export type ProductQueryResult = {

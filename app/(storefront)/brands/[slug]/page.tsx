@@ -6,6 +6,7 @@ import { ProductResults } from "@/components/shop/product-results";
 import { SortSelect } from "@/components/shop/sort-select";
 import { getBrandBySlug, queryProducts } from "@/lib/catalog/queries";
 import { parseProductSearchParams } from "@/lib/catalog/search-params";
+import { isGhanaVisitor } from "@/lib/currency/detect";
 import { createClient } from "@/lib/supabase/server";
 
 type RawSearchParams = { [key: string]: string | string[] | undefined };
@@ -38,7 +39,8 @@ export default async function BrandPage({
   if (!brand) notFound();
 
   const sp = await searchParams;
-  const result = await queryProducts(supabase, { ...parseProductSearchParams(sp), brand: [slug] });
+  const isGhana = await isGhanaVisitor();
+  const result = await queryProducts(supabase, { ...parseProductSearchParams(sp), brand: [slug], isGhana });
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">

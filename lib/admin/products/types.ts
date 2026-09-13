@@ -13,6 +13,8 @@ export type AdminProductListItem = {
   isFeatured: boolean;
   isNewArrival: boolean;
   isOnSale: boolean;
+  isFlashSale: boolean;
+  isInternationalOnly: boolean;
   brandName: string | null;
   categoryName: string | null;
   primaryImageUrl: string | null;
@@ -57,6 +59,8 @@ export type AdminProductDetail = {
   isFeatured: boolean;
   isNewArrival: boolean;
   isOnSale: boolean;
+  isFlashSale: boolean;
+  isInternationalOnly: boolean;
   status: ProductStatus;
   seoTitle: string | null;
   seoDescription: string | null;

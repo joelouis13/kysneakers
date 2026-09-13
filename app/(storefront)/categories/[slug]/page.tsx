@@ -6,6 +6,7 @@ import { ProductResults } from "@/components/shop/product-results";
 import { SortSelect } from "@/components/shop/sort-select";
 import { getCategoryBySlug, queryProducts } from "@/lib/catalog/queries";
 import { parseProductSearchParams } from "@/lib/catalog/search-params";
+import { isGhanaVisitor } from "@/lib/currency/detect";
 import { createClient } from "@/lib/supabase/server";
 
 type RawSearchParams = { [key: string]: string | string[] | undefined };
@@ -38,9 +39,11 @@ export default async function CategoryPage({
   if (!category) notFound();
 
   const sp = await searchParams;
+  const isGhana = await isGhanaVisitor();
   const result = await queryProducts(supabase, {
     ...parseProductSearchParams(sp),
     category: [slug],
+    isGhana,
   });
 
   return (

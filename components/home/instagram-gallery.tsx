@@ -2,14 +2,17 @@ import Image from "next/image";
 
 import { InstagramIcon } from "@/components/icons/social";
 import { queryProducts } from "@/lib/catalog/queries";
+import { isGhanaVisitor } from "@/lib/currency/detect";
 import { createClient } from "@/lib/supabase/server";
 
 export async function InstagramGallery() {
   const supabase = await createClient();
+  const isGhana = await isGhanaVisitor();
   const { products } = await queryProducts(supabase, {
     isFeatured: true,
     sort: "newest",
     perPage: 6,
+    isGhana,
   });
   const galleryImages = products
     .map((p) => p.primaryImageUrl)

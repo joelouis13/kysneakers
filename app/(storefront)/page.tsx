@@ -6,14 +6,16 @@ import { ProductSection } from "@/components/home/product-section";
 import { PromoBanner } from "@/components/home/promo-banner";
 import { Testimonials } from "@/components/home/testimonials";
 import { getBestSellers, getFeaturedProducts, getNewArrivals } from "@/lib/catalog/queries";
+import { isGhanaVisitor } from "@/lib/currency/detect";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function Home() {
   const supabase = await createClient();
+  const isGhana = await isGhanaVisitor();
   const [featured, bestSellers, newArrivals] = await Promise.all([
-    getFeaturedProducts(supabase),
-    getBestSellers(supabase),
-    getNewArrivals(supabase),
+    getFeaturedProducts(supabase, 8, isGhana),
+    getBestSellers(supabase, 8, isGhana),
+    getNewArrivals(supabase, 8, isGhana),
   ]);
 
   return (

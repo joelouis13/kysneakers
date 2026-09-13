@@ -1,11 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { logAudit, requireStaffUser } from "@/lib/admin/guard";
+import { convertBetween, getExchangeRates } from "@/lib/currency/rates";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/database";
 
-import { productFormSchema, parseTags, type ProductFormValues } from "./schemas";
+import { buildProductFormSchema, parseTags, type ProductFormValues } from "./schemas";
 import { removeProductImage, uploadProductImage } from "./storage";
 import type { ImageInput } from "./types";
 
@@ -16,7 +19,26 @@ function mapUniqueViolation(message: string): string | null {
   return null;
 }
 
-function scalarProductFields(values: ProductFormValues) {
+/** Perfumes are single-fragrance products with no meaningful size variant — the one category exempt from "at least one size". */
+async function getSizeExemptCategoryId(supabase: SupabaseClient<Database>): Promise<string | null> {
+  const { data } = await supabase.from("categories").select("id").eq("slug", "perfumes").maybeSingle();
+  return data?.id ?? null;
+}
+
+async function scalarProductFields(values: ProductFormValues) {
+  // Whichever of regular/EUR price is missing (schema guarantees at least
+  // one is set) gets derived once at save time from the other via the live
+  // rate — a fixed snapshot, same as a manually-typed value in either
+  // currency, not a standing "always recompute" link.
+  const needsGhsRegular = values.regularPrice === undefined;
+  const needsGhsSale = values.isOnSale && values.salePrice === undefined && values.eurSalePrice !== undefined;
+  const rates = needsGhsRegular || needsGhsSale ? await getExchangeRates() : null;
+
+  const regularPrice = values.regularPrice ?? convertBetween(values.eurRegularPrice!, "EUR", "GHS", rates!);
+  const salePrice = values.isOnSale
+    ? (values.salePrice ?? (values.eurSalePrice !== undefined ? convertBetween(values.eurSalePrice, "EUR", "GHS", rates!) : null))
+    : null;
+
   return {
     sku: values.sku,
     name: values.name,
@@ -24,8 +46,8 @@ function scalarProductFields(values: ProductFormValues) {
     description: values.description || null,
     brand_id: values.brandId || null,
     category_id: values.categoryId || null,
-    regular_price: values.regularPrice,
-    sale_price: values.isOnSale ? (values.salePrice ?? null) : null,
+    regular_price: regularPrice,
+    sale_price: salePrice,
     eur_regular_price: values.eurRegularPrice ?? null,
     eur_sale_price: values.isOnSale ? (values.eurSalePrice ?? null) : null,
     weight_grams: values.weightGrams ?? null,
@@ -33,6 +55,8 @@ function scalarProductFields(values: ProductFormValues) {
     is_featured: values.isFeatured,
     is_new_arrival: values.isNewArrival,
     is_on_sale: values.isOnSale,
+    is_flash_sale: values.isFlashSale,
+    is_international_only: values.isInternationalOnly,
     status: values.status,
     seo_title: values.seoTitle || null,
     seo_description: values.seoDescription || null,
@@ -47,7 +71,8 @@ export async function createProduct(
   const staff = await requireStaffUser(supabase);
   if ("error" in staff) return staff;
 
-  const parsed = productFormSchema.safeParse(values);
+  const sizeExemptCategoryId = await getSizeExemptCategoryId(supabase);
+  const parsed = buildProductFormSchema(sizeExemptCategoryId).safeParse(values);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
   }
@@ -74,7 +99,7 @@ export async function createProduct(
 
     const { error: insertError } = await supabase
       .from("products")
-      .insert({ id: productId, created_by: staff.userId, ...scalarProductFields(parsed.data) });
+      .insert({ id: productId, created_by: staff.userId, ...(await scalarProductFields(parsed.data)) });
     if (insertError) {
       const friendly = mapUniqueViolation(insertError.message);
       return { error: friendly ?? "Couldn't create the product. Please try again." };
@@ -134,7 +159,8 @@ export async function updateProduct(
   const staff = await requireStaffUser(supabase);
   if ("error" in staff) return staff;
 
-  const parsed = productFormSchema.safeParse(values);
+  const sizeExemptCategoryId = await getSizeExemptCategoryId(supabase);
+  const parsed = buildProductFormSchema(sizeExemptCategoryId).safeParse(values);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
   }
@@ -188,7 +214,7 @@ export async function updateProduct(
     // --- Scalar fields
     const { error: updateError } = await supabase
       .from("products")
-      .update(scalarProductFields(parsed.data))
+      .update(await scalarProductFields(parsed.data))
       .eq("id", productId);
     if (updateError) {
       const friendly = mapUniqueViolation(updateError.message);
