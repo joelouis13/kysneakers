@@ -2,12 +2,20 @@
 -- visitors/listings while still showing it everywhere else. Off by default,
 -- so every existing product keeps showing in both markets exactly as before.
 alter table public.products
-  add column is_international_only boolean not null default false;
+  add column if not exists is_international_only boolean not null default false;
 
 -- search_products must be dropped first: Postgres won't let create-or-replace
--- change a TABLE-returning function's output columns in place. (This
--- recreation doesn't change the output columns, only adds a filter param, but
--- Postgres still requires the drop for consistency with prior migrations.)
+-- change a TABLE-returning function's output columns in place. This targets
+-- the signature the Flash Sales migration (20260913000002) produces — five
+-- booleans (p_in_stock, p_is_featured, p_is_new_arrival, p_is_on_sale,
+-- p_is_flash_sale) before p_exclude_id, not the pre-Flash-Sales signature —
+-- otherwise this drop silently no-ops and search_products ends up with two
+-- overloaded versions instead of being cleanly replaced.
+drop function if exists public.search_products(
+  text, text[], text[], text[], numeric, numeric, boolean, boolean, boolean, boolean, boolean, uuid, text, text, int, int
+);
+-- Also drop the pre-Flash-Sales signature (four booleans), in case this runs
+-- against a database where that migration never applied.
 drop function if exists public.search_products(
   text, text[], text[], text[], numeric, numeric, boolean, boolean, boolean, boolean, uuid, text, text, int, int
 );
