@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 
+import { SIGNUPS_ENABLED } from "./config";
 import { getAuthErrorMessage } from "./errors";
 import { getSafeRedirectPath } from "./redirect";
 import {
@@ -50,6 +51,8 @@ export async function signup(
   values: SignupValues,
   redirectTo?: string
 ): Promise<{ error: string } | { needsEmailConfirmation: true } | void> {
+  if (!SIGNUPS_ENABLED) return { error: "New account sign-ups are currently closed." };
+
   const parsed = signupSchema.safeParse(values);
   if (!parsed.success) return { error: "Invalid input." };
 

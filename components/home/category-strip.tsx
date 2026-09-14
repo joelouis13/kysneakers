@@ -1,8 +1,27 @@
-import Image from "next/image";
 import Link from "next/link";
+import {
+  Briefcase,
+  Footprints,
+  Recycle,
+  ShoppingBag,
+  Shirt,
+  SprayCan,
+  Tag,
+  type LucideIcon,
+} from "lucide-react";
 
 import { getCategories } from "@/lib/catalog/queries";
 import { createClient } from "@/lib/supabase/server";
+
+/** Keyed by slug — falls back to a generic tag icon for any category without a specific match. */
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  sneakers: Footprints,
+  perfumes: SprayCan,
+  "t-shirts": Shirt,
+  suits: Briefcase,
+  bags: ShoppingBag,
+  "2nd-hand-shop": Recycle,
+};
 
 export async function CategoryStrip() {
   const supabase = await createClient();
@@ -13,28 +32,24 @@ export async function CategoryStrip() {
       <h2 className="mb-6 font-heading text-3xl tracking-wide text-foreground">
         Shop by Category
       </h2>
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {categories.map((category) => (
-          <Link
-            key={category.id}
-            href={`/categories/${category.slug}`}
-            className="group relative aspect-4/5 overflow-hidden rounded-xl bg-muted"
-          >
-            {category.imageUrl && (
-              <Image
-                src={category.imageUrl}
-                alt={category.name}
-                fill
-                sizes="(min-width: 1024px) 22vw, 45vw"
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/5 to-transparent" />
-            <span className="absolute bottom-4 left-4 font-heading text-xl tracking-wide text-white">
-              {category.name}
-            </span>
-          </Link>
-        ))}
+      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+        {categories.map((category) => {
+          const Icon = CATEGORY_ICONS[category.slug] ?? Tag;
+          return (
+            <Link
+              key={category.id}
+              href={`/categories/${category.slug}`}
+              className="group flex flex-col items-center gap-3 rounded-xl border border-border bg-card px-3 py-5 text-center transition-colors hover:border-primary hover:shadow-sm"
+            >
+              <span className="flex size-11 items-center justify-center rounded-full bg-muted text-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                <Icon className="size-5" />
+              </span>
+              <span className="text-sm font-medium tracking-wide text-foreground">
+                {category.name}
+              </span>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );

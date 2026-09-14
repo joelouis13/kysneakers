@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { login } from "@/lib/auth/actions";
+import { SIGNUPS_ENABLED } from "@/lib/auth/config";
 import { loginSchema, type LoginValues } from "@/lib/auth/schemas";
 
 export function LoginForm({ redirectTo }: { redirectTo: string }) {
@@ -32,13 +33,17 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
 
   return (
     <div className="flex w-full max-w-sm flex-col gap-6">
-      <GoogleSignInButton redirectTo={redirectTo} />
+      {SIGNUPS_ENABLED && (
+        <>
+          <GoogleSignInButton redirectTo={redirectTo} />
 
-      <div className="flex items-center gap-3">
-        <Separator className="flex-1" />
-        <span className="text-xs text-muted-foreground">or continue with email</span>
-        <Separator className="flex-1" />
-      </div>
+          <div className="flex items-center gap-3">
+            <Separator className="flex-1" />
+            <span className="text-xs text-muted-foreground">or continue with email</span>
+            <Separator className="flex-1" />
+          </div>
+        </>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
         <div>
@@ -78,15 +83,17 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
         </Button>
       </form>
 
-      <p className="text-center text-sm text-muted-foreground">
-        Don&apos;t have an account?{" "}
-        <Link
-          href={`/signup?redirect=${encodeURIComponent(redirectTo)}`}
-          className="font-medium text-foreground hover:underline"
-        >
-          Sign up
-        </Link>
-      </p>
+      {SIGNUPS_ENABLED && (
+        <p className="text-center text-sm text-muted-foreground">
+          Don&apos;t have an account?{" "}
+          <Link
+            href={`/signup?redirect=${encodeURIComponent(redirectTo)}`}
+            className="font-medium text-foreground hover:underline"
+          >
+            Sign up
+          </Link>
+        </p>
+      )}
     </div>
   );
 }
