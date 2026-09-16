@@ -51,6 +51,7 @@ function defaultValuesFor(product?: AdminProductDetail): ProductFormValues {
       isNewArrival: false,
       isFlashSale: false,
       isInternationalOnly: false,
+      isGhanaOnly: false,
       status: "draft",
       seoTitle: "",
       seoDescription: "",
@@ -75,6 +76,7 @@ function defaultValuesFor(product?: AdminProductDetail): ProductFormValues {
     isNewArrival: product.isNewArrival,
     isFlashSale: product.isFlashSale,
     isInternationalOnly: product.isInternationalOnly,
+    isGhanaOnly: product.isGhanaOnly,
     status: product.status,
     seoTitle: product.seoTitle ?? "",
     seoDescription: product.seoDescription ?? "",
@@ -128,6 +130,9 @@ export function ProductForm({
 
   const { fields, append, remove } = useFieldArray({ control, name: "sizes" });
   const isOnSale = useWatch({ control, name: "isOnSale" });
+  const isInternationalOnly = useWatch({ control, name: "isInternationalOnly" });
+  const isGhanaOnly = useWatch({ control, name: "isGhanaOnly" });
+  const watchedStatus = useWatch({ control, name: "status" });
   const name = useWatch({ control, name: "name" });
   const categoryId = useWatch({ control, name: "categoryId" });
   const isPerfumeCategory = perfumeCategoryId !== null && categoryId === perfumeCategoryId;
@@ -403,15 +408,32 @@ export function ProductForm({
           <div className="flex items-center gap-2">
             <Checkbox
               id="isInternationalOnly"
-              onCheckedChange={(checked) => setValue("isInternationalOnly", checked === true)}
-              defaultChecked={initialProduct?.isInternationalOnly}
+              checked={isInternationalOnly}
+              onCheckedChange={(checked) => {
+                setValue("isInternationalOnly", checked === true);
+                if (checked === true) setValue("isGhanaOnly", false);
+              }}
             />
             <Label htmlFor="isInternationalOnly" className="font-normal">
               International Only
             </Label>
           </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="isGhanaOnly"
+              checked={isGhanaOnly}
+              onCheckedChange={(checked) => {
+                setValue("isGhanaOnly", checked === true);
+                if (checked === true) setValue("isInternationalOnly", false);
+              }}
+            />
+            <Label htmlFor="isGhanaOnly" className="font-normal">
+              Ghana Only
+            </Label>
+          </div>
           <p className="-mt-2 text-xs text-muted-foreground sm:col-span-2">
-            Hides this product from Ghana visitors — it&apos;ll only show for international (EUR/USD/GBP) shoppers.
+            International Only hides this product from Ghana visitors (shows for EUR/USD/GBP shoppers only). Ghana
+            Only does the reverse — hides it from everyone outside Ghana. A product can only use one at a time.
           </p>
           <div>
             <Label className="mb-1.5">Tags (comma-separated)</Label>
@@ -429,9 +451,16 @@ export function ProductForm({
               <SelectContent>
                 <SelectItem value="draft">Draft</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="out_of_stock">Out of Stock</SelectItem>
                 <SelectItem value="archived">Archived</SelectItem>
               </SelectContent>
             </Select>
+            {watchedStatus === "out_of_stock" && (
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Stays visible and browsable on the storefront, but shows as out of stock and can&apos;t be
+                purchased — regardless of the real stock counts below.
+              </p>
+            )}
           </div>
         </div>
       </section>

@@ -1,0 +1,123 @@
+-- Ghana Only: the mirror image of International Only — hides a product from
+-- non-Ghana (international) visitors while still selling it in Ghana. A
+-- product can't be flagged both at once (that would hide it everywhere).
+alter table public.products
+  add column is_ghana_only boolean not null default false;
+
+alter table public.products
+  add constraint products_market_only_check
+    check (not (is_international_only and is_ghana_only));
+
+-- Out of Stock: a fourth product status alongside draft/active/archived.
+-- Unlike draft/archived it stays publicly listed and browsable — it's a
+-- merchandising override ("temporarily not selling this") independent of
+-- real per-size inventory, which the storefront otherwise treats as the
+-- source of truth for "in stock".
+alter table public.products
+  drop constraint products_status_check;
+alter table public.products
+  add constraint products_status_check
+    check (status in ('draft', 'active', 'archived', 'out_of_stock'));
+
+-- search_products: same signature and return columns as the International
+-- Only migration (20260913000003) — p_is_ghana now also drives Ghana Only
+-- filtering (symmetric to the existing International Only clause), the
+-- default 'active' status request also surfaces 'out_of_stock' products
+-- (they stay browsable, just unavailable), and total_stock reports 0 for
+-- out_of_stock products regardless of real inventory — every storefront
+-- "in stock"/"out of stock" display already keys off this single number, so
+-- forcing it here is all that's needed to make the override take effect
+-- everywhere (product cards, size selector, add-to-cart) without touching
+-- each of them individually. Signature/return type are unchanged from the
+-- prior migration, so this is a plain create-or-replace, no drop needed.
+create or replace function public.search_products(
+  p_q text default null,
+  p_brand_slugs text[] default null,
+  p_category_slugs text[] default null,
+  p_sizes text[] default null,
+  p_min_price numeric default null,
+  p_max_price numeric default null,
+  p_in_stock boolean default null,
+  p_is_featured boolean default null,
+  p_is_new_arrival boolean default null,
+  p_is_on_sale boolean default null,
+  p_is_flash_sale boolean default null,
+  p_exclude_id uuid default null,
+  p_status text default 'active',
+  p_sort text default 'newest',
+  p_limit int default 12,
+  p_offset int default 0,
+  p_is_ghana boolean default false
+)
+returns table (
+  id uuid, sku text, name text, slug text, description text,
+  brand_id uuid, brand_name text, brand_slug text,
+  category_id uuid, category_name text, category_slug text,
+  regular_price numeric, sale_price numeric, effective_price numeric,
+  eur_regular_price numeric, eur_sale_price numeric, eur_effective_price numeric,
+  is_featured boolean, is_new_arrival boolean, is_on_sale boolean, is_flash_sale boolean,
+  tags text[], created_at timestamptz,
+  primary_image_url text, total_stock bigint,
+  review_count bigint, rating_avg numeric,
+  total_count bigint
+)
+language sql stable as $$
+  with filtered as (
+    select
+      p.id, p.sku, p.name, p.slug, p.description, p.brand_id, p.category_id,
+      p.regular_price, p.sale_price, coalesce(p.sale_price, p.regular_price) as effective_price,
+      p.eur_regular_price, p.eur_sale_price,
+      coalesce(p.eur_sale_price, p.eur_regular_price) as eur_effective_price,
+      p.is_featured, p.is_new_arrival, p.is_on_sale, p.is_flash_sale, p.tags, p.created_at,
+      b.name as brand_name, b.slug as brand_slug,
+      c.name as category_name, c.slug as category_slug,
+      (select pi.url from public.product_images pi where pi.product_id = p.id
+         order by pi.is_featured desc, pi.display_order asc limit 1) as primary_image_url,
+      case when p.status = 'out_of_stock' then 0
+        else (select coalesce(sum(inv.quantity), 0) from public.product_sizes ps
+                join public.inventory inv on inv.product_size_id = ps.id
+                where ps.product_id = p.id)
+      end as total_stock,
+      (select count(*) from public.reviews r where r.product_id = p.id and r.status = 'approved') as review_count,
+      (select avg(r.rating) from public.reviews r where r.product_id = p.id and r.status = 'approved') as rating_avg
+    from public.products p
+    left join public.brands b on b.id = p.brand_id
+    left join public.categories c on c.id = p.category_id
+    where p.deleted_at is null
+      and (p_status is null or p.status = p_status or (p_status = 'active' and p.status = 'out_of_stock'))
+      and (p_exclude_id is null or p.id <> p_exclude_id)
+      and (p_q is null or p_q = '' or
+           (p.name || ' ' || coalesce(b.name, '') || ' ' || coalesce(p.description, '')) ilike '%' || p_q || '%')
+      and (p_brand_slugs is null or b.slug = any(p_brand_slugs))
+      and (p_category_slugs is null or c.slug = any(p_category_slugs))
+      and (p_is_featured is null or p.is_featured = p_is_featured)
+      and (p_is_new_arrival is null or p.is_new_arrival = p_is_new_arrival)
+      and (p_is_on_sale is null or p.is_on_sale = p_is_on_sale)
+      and (p_is_flash_sale is null or p.is_flash_sale = p_is_flash_sale)
+      and (p_is_ghana is not true or p.is_international_only = false)
+      and (p_is_ghana is not false or p.is_ghana_only = false)
+      and (p_min_price is null or coalesce(p.sale_price, p.regular_price) >= p_min_price)
+      and (p_max_price is null or coalesce(p.sale_price, p.regular_price) <= p_max_price)
+      and (p_sizes is null or exists (
+        select 1 from public.product_sizes ps join public.inventory inv on inv.product_size_id = ps.id
+        where ps.product_id = p.id and ps.size = any(p_sizes) and inv.quantity > 0))
+      and (p_in_stock is not true or exists (
+        select 1 from public.product_sizes ps join public.inventory inv on inv.product_size_id = ps.id
+        where ps.product_id = p.id and inv.quantity > 0))
+  ),
+  counted as (select *, count(*) over() as total_count from filtered)
+  select id, sku, name, slug, description, brand_id, brand_name, brand_slug,
+         category_id, category_name, category_slug, regular_price, sale_price, effective_price,
+         eur_regular_price, eur_sale_price, eur_effective_price,
+         is_featured, is_new_arrival, is_on_sale, is_flash_sale, tags, created_at,
+         primary_image_url, total_stock, review_count, rating_avg, total_count
+  from counted
+  order by
+    case when p_sort = 'price-asc' then effective_price end asc,
+    case when p_sort = 'price-desc' then effective_price end desc,
+    case when p_sort = 'popular' then review_count end desc,
+    created_at desc
+  limit p_limit offset p_offset;
+$$;
+
+grant execute on function public.search_products to anon, authenticated;

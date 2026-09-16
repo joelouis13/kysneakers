@@ -4,25 +4,25 @@ import { ProductSection } from "@/components/home/product-section";
 import {
   getBestSellers,
   getFeaturedProducts,
+  getFlashSaleProducts,
   getNewArrivals,
-  getOnSaleProducts,
 } from "@/lib/catalog/queries";
 import { isGhanaVisitor } from "@/lib/currency/detect";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Collections",
-  description: "Curated KYSneakers collections — Featured, New Arrivals, Best Sellers, and Sale.",
+  description: "Curated KYSneakers collections — Flash Sales, Featured, New Arrivals, and Best Sellers.",
 };
 
 export default async function CollectionsPage() {
   const supabase = await createClient();
   const isGhana = await isGhanaVisitor();
-  const [featured, newArrivals, bestSellers, onSale] = await Promise.all([
+  const [flashSales, featured, newArrivals, bestSellers] = await Promise.all([
+    getFlashSaleProducts(supabase, 8, isGhana),
     getFeaturedProducts(supabase, 8, isGhana),
     getNewArrivals(supabase, 8, isGhana),
     getBestSellers(supabase, 8, isGhana),
-    getOnSaleProducts(supabase, 8, isGhana),
   ]);
 
   return (
@@ -33,6 +33,12 @@ export default async function CollectionsPage() {
       </p>
 
       <div className="-mx-4 sm:-mx-6 lg:-mx-8">
+        <ProductSection
+          title="Flash Sales"
+          subtitle="Limited-time deals — grab them before they're gone"
+          products={flashSales}
+          viewAllHref="/shop?filter=flash-sale"
+        />
         <ProductSection
           title="Featured"
           subtitle="Hand-picked styles our team is loving right now"
@@ -47,15 +53,9 @@ export default async function CollectionsPage() {
         />
         <ProductSection
           title="Best Sellers"
-          subtitle="Ghana's most-loved sneakers"
+          subtitle="Get the most-loved products before they sell out"
           products={bestSellers}
           viewAllHref="/shop?sort=popular"
-        />
-        <ProductSection
-          title="On Sale"
-          subtitle="Limited-time markdowns"
-          products={onSale}
-          viewAllHref="/shop?filter=on-sale"
         />
       </div>
     </div>

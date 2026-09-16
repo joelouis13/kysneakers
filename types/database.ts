@@ -25,7 +25,7 @@ type Table<
 };
 
 export type RoleName = "super_admin" | "admin" | "manager" | "staff" | "customer";
-export type ProductStatus = "draft" | "active" | "archived";
+export type ProductStatus = "draft" | "active" | "archived" | "out_of_stock";
 export type CouponDiscountType = "percentage" | "fixed_amount";
 export type OrderStatus =
   | "pending_payment"
@@ -115,6 +115,7 @@ export interface Database {
           is_on_sale: boolean;
           is_flash_sale: boolean;
           is_international_only: boolean;
+          is_ghana_only: boolean;
           status: ProductStatus;
           seo_title: string | null;
           seo_description: string | null;
@@ -139,6 +140,7 @@ export interface Database {
         | "is_on_sale"
         | "is_flash_sale"
         | "is_international_only"
+        | "is_ghana_only"
         | "status"
         | "seo_title"
         | "seo_description"

@@ -57,6 +57,7 @@ async function scalarProductFields(values: ProductFormValues) {
     is_on_sale: values.isOnSale,
     is_flash_sale: values.isFlashSale,
     is_international_only: values.isInternationalOnly,
+    is_ghana_only: values.isGhanaOnly,
     status: values.status,
     seo_title: values.seoTitle || null,
     seo_description: values.seoDescription || null,

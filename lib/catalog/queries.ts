@@ -244,7 +244,7 @@ export async function getCatalogFacets(supabase: Client): Promise<CatalogFacets>
 }
 
 const PRODUCT_DETAIL_SELECT = `
-  id, sku, name, slug, description, tags,
+  id, sku, name, slug, description, tags, status,
   regular_price, sale_price, eur_regular_price, eur_sale_price, is_featured, is_new_arrival, is_on_sale, is_flash_sale,
   brand:brands ( id, name, slug ),
   category:categories ( id, name, slug ),
@@ -259,6 +259,7 @@ type ProductDetailRow = {
   slug: string;
   description: string | null;
   tags: string[];
+  status: string;
   regular_price: number;
   sale_price: number | null;
   eur_regular_price: number | null;
@@ -302,10 +303,15 @@ function mapDetailRow(
       isFeatured: img.is_featured,
     }));
 
+  // "Out of Stock" is an admin merchandising override, independent of real
+  // per-size inventory — forcing every size's reported stock to 0 here is
+  // all that's needed, since the storefront's size selector/add-to-cart/
+  // in-stock messaging all key off these numbers, not the raw status.
+  const forcedOutOfStock = row.status === "out_of_stock";
   const sizes: ProductSizeStock[] = row.sizes.map((s) => ({
     id: s.id,
     size: s.size,
-    stock: s.inventory?.quantity ?? 0,
+    stock: forcedOutOfStock ? 0 : (s.inventory?.quantity ?? 0),
   }));
 
   const totalStock = sizes.reduce((sum, s) => sum + s.stock, 0);
@@ -345,7 +351,7 @@ export async function getProductBySlug(supabase: Client, slug: string): Promise<
     .from("products")
     .select(PRODUCT_DETAIL_SELECT)
     .eq("slug", slug)
-    .eq("status", "active")
+    .in("status", ["active", "out_of_stock"])
     .is("deleted_at", null)
     .maybeSingle();
   if (error) throw error;
@@ -364,7 +370,7 @@ export async function getProductsBySlugs(supabase: Client, slugs: string[]): Pro
     .from("products")
     .select(PRODUCT_DETAIL_SELECT)
     .in("slug", slugs)
-    .eq("status", "active")
+    .in("status", ["active", "out_of_stock"])
     .is("deleted_at", null);
   if (error) throw error;
 

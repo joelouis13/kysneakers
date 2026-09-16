@@ -41,7 +41,8 @@ export function buildProductFormSchema(sizeExemptCategoryId: string | null) {
       isNewArrival: z.boolean(),
       isFlashSale: z.boolean(),
       isInternationalOnly: z.boolean(),
-      status: z.enum(["draft", "active", "archived"]),
+      isGhanaOnly: z.boolean(),
+      status: z.enum(["draft", "active", "archived", "out_of_stock"]),
       seoTitle: z.string().optional(),
       seoDescription: z.string().optional(),
       sizes: z.array(productSizeInputSchema),
@@ -76,6 +77,10 @@ export function buildProductFormSchema(sizeExemptCategoryId: string | null) {
     .refine((v) => v.sizes.length > 0 || (!!v.categoryId && v.categoryId === sizeExemptCategoryId), {
       message: "Add at least one size",
       path: ["sizes"],
+    })
+    .refine((v) => !(v.isInternationalOnly && v.isGhanaOnly), {
+      message: "A product can't be both International Only and Ghana Only",
+      path: ["isGhanaOnly"],
     });
 }
 

@@ -59,6 +59,7 @@ export function ProductFilters({
           <SelectItem value="all">All Statuses</SelectItem>
           <SelectItem value="draft">Draft</SelectItem>
           <SelectItem value="active">Active</SelectItem>
+          <SelectItem value="out_of_stock">Out of Stock</SelectItem>
           <SelectItem value="archived">Archived</SelectItem>
         </SelectContent>
       </Select>

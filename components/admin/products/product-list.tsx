@@ -90,7 +90,7 @@ export function ProductList({ products }: { products: AdminProductListItem[] }) 
               </span>
               <span className="text-xs text-muted-foreground">{product.totalStock} in stock</span>
               <Badge variant={product.status === "active" ? "secondary" : "destructive"}>
-                {product.status}
+                {product.status.replace("_", " ")}
               </Badge>
 
               <DropdownMenu>

@@ -15,6 +15,7 @@ export type AdminProductListItem = {
   isOnSale: boolean;
   isFlashSale: boolean;
   isInternationalOnly: boolean;
+  isGhanaOnly: boolean;
   brandName: string | null;
   categoryName: string | null;
   primaryImageUrl: string | null;
@@ -61,6 +62,7 @@ export type AdminProductDetail = {
   isOnSale: boolean;
   isFlashSale: boolean;
   isInternationalOnly: boolean;
+  isGhanaOnly: boolean;
   status: ProductStatus;
   seoTitle: string | null;
   seoDescription: string | null;
