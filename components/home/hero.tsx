@@ -37,7 +37,7 @@ const SLIDES: Slide[] = [
     eyebrow: "Just Dropped",
     title: "New Arrivals Are Here",
     description:
-      "Fresh kicks added every week. Be first to cop the latest silhouettes before they sell out.",
+      "Fresh products added every week. Be first to cop the latest silhouettes before they sell out.",
     ctaLabel: "Shop New Arrivals",
     ctaHref: "/shop?sort=newest",
     secondaryLabel: "View Collections",
