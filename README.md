@@ -95,7 +95,7 @@ cp .env.local.example .env.local
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client-side Supabase access |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only privileged operations (checkout, admin writes) — never expose this |
-| `NEXT_PUBLIC_SITE_URL` | Absolute URLs in emails, redirects, and webhook callbacks |
+| `SITE_URL` | Absolute URLs in emails, redirects, and webhook callbacks (server-only, no `NEXT_PUBLIC_` prefix) |
 | `MOOLRE_API_USER` / `MOOLRE_API_KEY` / `MOOLRE_ACCOUNT_ID` / `MOOLRE_WEBHOOK_SECRET` | Ghana Mobile Money checkout |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | International card checkout |
 | `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | Transactional email |
@@ -159,7 +159,7 @@ with it, so `next.config.ts` disables it automatically when `VERCEL` is set.
 docker build \
   --build-arg NEXT_PUBLIC_SUPABASE_URL=... \
   --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=... \
-  --build-arg NEXT_PUBLIC_SITE_URL=... \
+  --build-arg SITE_URL=... \
   --secret id=supabase_service_role_key,src=<path-to-a-file-containing-just-the-key> \
   -t kysneakers .
 

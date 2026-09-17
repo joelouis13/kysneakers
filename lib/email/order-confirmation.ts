@@ -119,7 +119,7 @@ function buildText(order: OrderStatusPayload, orderUrl: string): string {
  * (the payment/order state is already correctly persisted by that point).
  */
 export async function sendOrderConfirmationEmail(order: OrderStatusPayload): Promise<void> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const siteUrl = process.env.SITE_URL ?? "http://localhost:3000";
   const orderUrl = `${siteUrl}/orders`;
 
   try {
@@ -206,7 +206,7 @@ function buildStaffText(order: OrderStatusPayload, adminOrderUrl: string): strin
 
 /** Internal notification to staff — separate from the customer-facing confirmation, tailored for fulfillment. */
 export async function sendNewOrderStaffNotification(order: OrderStatusPayload): Promise<void> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const siteUrl = process.env.SITE_URL ?? "http://localhost:3000";
   const adminOrderUrl = `${siteUrl}/admin/orders/${order.orderId}`;
 
   try {

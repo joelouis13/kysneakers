@@ -26,7 +26,7 @@ const SLIDES: Slide[] = [
     eyebrow: "New Season",
     title: "Step Into Something Bold",
     description:
-      "Authentic sneakers and streetwear from the world's biggest names — curated for Ghana, delivered fast.",
+      "Authentic sneakers and streetwear from the world's biggest names — delivered fast.",
     ctaLabel: "Shop Now",
     ctaHref: "/shop",
     secondaryLabel: "View Collections",

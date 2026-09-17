@@ -21,13 +21,17 @@ COPY . .
 
 # NEXT_PUBLIC_* values are inlined into the client bundle at build time, so
 # they must be supplied as build args (docker build --build-arg NAME=value),
-# not just at `docker run`.
+# not just at `docker run`. SITE_URL isn't NEXT_PUBLIC (server-only — see
+# app/layout.tsx's metadataBase) but still needs to be a build arg here too:
+# the product detail route is statically generated (generateStaticParams),
+# so its metadata is baked in during this same `next build`, not read fresh
+# per request the way it would be for a purely dynamic route.
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
-ARG NEXT_PUBLIC_SITE_URL
+ARG SITE_URL
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
-ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+ENV SITE_URL=$SITE_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # The product detail route's generateStaticParams/generateMetadata hit the

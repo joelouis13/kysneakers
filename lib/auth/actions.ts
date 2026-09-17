@@ -19,7 +19,7 @@ import {
 } from "./schemas";
 
 function siteUrl(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  return process.env.SITE_URL ?? "http://localhost:3000";
 }
 
 export async function login(
