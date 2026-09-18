@@ -40,9 +40,16 @@ export function OrderStatusView({ initialOrder }: { initialOrder: OrderStatusPay
   const [isActing, setIsActing] = useState(false);
 
   const payment = order.payment;
-  const needsOtp = payment?.status === "pending" && payment.providerMessage === "TP14";
-  const isPending = payment?.status === "pending" && !needsOtp;
-  const isFailed = payment?.status === "failed";
+  // Once staff have moved the order past pending_payment (paid, processing,
+  // ...delivered), payment-in-progress messaging is stale even if the
+  // payment row itself never got a terminal status (e.g. a webhook that
+  // never fired) — showing "waiting for payment approval" under a
+  // "Delivered" badge is a straight contradiction, not just outdated.
+  const paymentStillPending = order.status === "pending_payment";
+  const needsOtp =
+    paymentStillPending && payment?.status === "pending" && payment.providerMessage === "TP14";
+  const isPending = paymentStillPending && payment?.status === "pending" && !needsOtp;
+  const isFailed = paymentStillPending && payment?.status === "failed";
   const isPaid = order.status === "paid" || payment?.status === "successful";
 
   useEffect(() => {
