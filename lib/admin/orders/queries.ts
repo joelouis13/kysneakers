@@ -58,7 +58,7 @@ const DETAIL_SELECT = `
   id, order_number, status, profile_id, customer_name, customer_email, customer_phone,
   shipping_recipient_name, shipping_phone, shipping_region, shipping_city, shipping_street_address, shipping_house_address, shipping_landmark,
   shipping_country, shipping_postal_code,
-  subtotal, discount_total, delivery_fee, total, currency, vat_rate, vat_amount, notes, created_at,
+  subtotal, discount_total, delivery_fee, total, currency, vat_rate, vat_amount, notes, staff_comment, created_at,
   items:order_items ( product_name, size, sku, unit_price, quantity, line_total ),
   payments ( id, status, method, payer_phone, provider_reference, provider_message, verified_at, created_at )
 `;
@@ -88,6 +88,7 @@ type DetailRow = {
   vat_rate: number;
   vat_amount: number;
   notes: string | null;
+  staff_comment: string | null;
   created_at: string;
   items: AdminOrderDetail["items"];
   payments: {
@@ -133,6 +134,7 @@ export async function getAdminOrderById(supabase: Client, id: string): Promise<A
     vatRate: row.vat_rate,
     vatAmount: row.vat_amount,
     notes: row.notes,
+    staffComment: row.staff_comment,
     createdAt: row.created_at,
     items: row.items,
     payments: row.payments.map((p) => ({

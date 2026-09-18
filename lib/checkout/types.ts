@@ -57,6 +57,8 @@ export type OrderStatusPayload = {
   customerEmail: string;
   customerPhone: string;
   shipping: OrderShippingSummary;
+  /** A note staff can leave for the customer (e.g. "shipped via DHL, tracking XYZ") — shown on the tracking page when set. */
+  staffComment: string | null;
   subtotal: number;
   discountTotal: number;
   deliveryFee: number;

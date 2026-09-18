@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { OrderLookupForm } from "@/components/orders/order-lookup-form";
 
@@ -14,7 +15,9 @@ export default function TrackOrderPage() {
       <p className="mb-8 text-sm text-muted-foreground">
         Enter your order number and the email or phone number used at checkout.
       </p>
-      <OrderLookupForm />
+      <Suspense fallback={null}>
+        <OrderLookupForm />
+      </Suspense>
     </div>
   );
 }

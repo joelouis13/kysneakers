@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, MessageSquare, XCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -136,6 +136,16 @@ export function OrderStatusView({ initialOrder }: { initialOrder: OrderStatusPay
           </div>
         </div>
       </div>
+
+      {order.staffComment && (
+        <div className="flex items-start gap-3 rounded-xl border border-border p-4">
+          <MessageSquare className="size-5 shrink-0 text-muted-foreground" />
+          <div>
+            <p className="text-sm font-semibold text-foreground">Update from KYSneakers</p>
+            <p className="mt-0.5 whitespace-pre-line text-sm text-muted-foreground">{order.staffComment}</p>
+          </div>
+        </div>
+      )}
 
       {isPaid && (
         <div className="flex items-center gap-3 rounded-xl border border-primary/30 bg-accent p-4">

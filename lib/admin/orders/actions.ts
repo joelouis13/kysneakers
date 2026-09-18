@@ -45,3 +45,27 @@ export async function updateOrderStatus(
 
   return { success: true };
 }
+
+/** Shown to the customer on the tracking page — distinct from `orders.notes`, the customer's own note left at checkout. */
+export async function updateOrderComment(
+  orderId: string,
+  comment: string
+): Promise<{ error: string } | { success: true }> {
+  const supabase = await createClient();
+  const staff = await requireStaffUser(supabase);
+  if ("error" in staff) return staff;
+
+  const trimmed = comment.trim();
+
+  const { error } = await supabase
+    .from("orders")
+    .update({ staff_comment: trimmed || null })
+    .eq("id", orderId);
+  if (error) return { error: "Couldn't save the comment. Please try again." };
+
+  await logAudit("orders", "order_comment_updated", orderId, staff.userId, { staff_comment: trimmed || null });
+
+  revalidatePath(`/admin/orders/${orderId}`);
+
+  return { success: true };
+}

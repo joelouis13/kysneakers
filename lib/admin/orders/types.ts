@@ -57,6 +57,7 @@ export type AdminOrderDetail = {
   vatRate: number;
   vatAmount: number;
   notes: string | null;
+  staffComment: string | null;
   createdAt: string;
   items: AdminOrderItem[];
   payments: AdminOrderPayment[];

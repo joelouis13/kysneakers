@@ -120,7 +120,11 @@ function buildText(order: OrderStatusPayload, orderUrl: string): string {
  */
 export async function sendOrderConfirmationEmail(order: OrderStatusPayload): Promise<void> {
   const siteUrl = process.env.SITE_URL ?? "http://localhost:3000";
-  const orderUrl = `${siteUrl}/orders`;
+  // Most customers have no account (sign-ups are currently closed) — link to
+  // the public tracking lookup, pre-filled so it loads straight to their
+  // order, not /orders (which requires being signed in and would just bounce
+  // a guest to a login page they can't use).
+  const orderUrl = `${siteUrl}/track-order?orderNumber=${encodeURIComponent(order.orderNumber)}&contact=${encodeURIComponent(order.customerEmail)}`;
 
   try {
     await getResendClient().emails.send({

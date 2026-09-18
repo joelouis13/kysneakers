@@ -298,6 +298,7 @@ export interface Database {
           vat_rate: number;
           vat_amount: number;
           notes: string | null;
+          staff_comment: string | null;
           created_at: string;
           updated_at: string;
         },
@@ -318,6 +319,7 @@ export interface Database {
         | "vat_rate"
         | "vat_amount"
         | "notes"
+        | "staff_comment"
         | "created_at"
         | "updated_at"
       >;

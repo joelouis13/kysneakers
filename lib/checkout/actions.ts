@@ -471,6 +471,7 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
       country: shippingSnapshot.country,
       postalCode: shippingSnapshot.postal_code,
     },
+    staffComment: null,
     subtotal,
     discountTotal,
     deliveryFee,

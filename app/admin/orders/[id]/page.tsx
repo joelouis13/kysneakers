@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
+import { OrderCommentForm } from "@/components/admin/orders/order-comment-form";
 import { OrderStatusForm } from "@/components/admin/orders/order-status-form";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -37,6 +38,10 @@ export default async function AdminOrderDetailPage({
 
       <div className="mb-6 rounded-xl border border-border p-6">
         <OrderStatusForm orderId={order.id} currentStatus={order.status} />
+      </div>
+
+      <div className="mb-6 rounded-xl border border-border p-6">
+        <OrderCommentForm orderId={order.id} currentComment={order.staffComment} />
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-2">

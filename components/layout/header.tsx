@@ -35,6 +35,7 @@ const NAV_LINKS = [
   { label: "Categories", href: "/categories" },
   { label: "Brands", href: "/brands" },
   { label: "Collections", href: "/collections" },
+  { label: "Track Order", href: "/track-order" },
 ];
 
 export function Header() {
