@@ -31,6 +31,9 @@ function optionalNumber(value: string) {
   return value === "" ? undefined : Number(value);
 }
 
+/** Bags have no size variant — a single stock count/threshold still needs a `size` value to satisfy the DB row, so this fills in for the hidden input. */
+const BAGS_SIZE_LABEL = "One Size";
+
 function defaultValuesFor(product?: AdminProductDetail): ProductFormValues {
   if (!product) {
     return {
@@ -105,6 +108,7 @@ export function ProductForm({
     () => categories.find((c) => c.slug === "perfumes")?.id ?? null,
     [categories]
   );
+  const bagsCategoryId = useMemo(() => categories.find((c) => c.slug === "bags")?.id ?? null, [categories]);
   const schema = useMemo(() => buildProductFormSchema(perfumeCategoryId), [perfumeCategoryId]);
   const [slugTouched, setSlugTouched] = useState(mode === "edit");
   const [images, setImages] = useState<ImageDraft[]>(
@@ -122,13 +126,14 @@ export function ProductForm({
     handleSubmit,
     control,
     setValue,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<ProductFormValues>({
     resolver: zodResolver(schema),
     defaultValues: defaultValuesFor(initialProduct),
   });
 
-  const { fields, append, remove } = useFieldArray({ control, name: "sizes" });
+  const { fields, append, remove, replace } = useFieldArray({ control, name: "sizes" });
   const isOnSale = useWatch({ control, name: "isOnSale" });
   const isInternationalOnly = useWatch({ control, name: "isInternationalOnly" });
   const isGhanaOnly = useWatch({ control, name: "isGhanaOnly" });
@@ -136,6 +141,25 @@ export function ProductForm({
   const name = useWatch({ control, name: "name" });
   const categoryId = useWatch({ control, name: "categoryId" });
   const isPerfumeCategory = perfumeCategoryId !== null && categoryId === perfumeCategoryId;
+  const isBagsCategory = bagsCategoryId !== null && categoryId === bagsCategoryId;
+
+  // Bags have no size dimension, but (unlike Perfumes) still need a real
+  // stock count/threshold — collapse to exactly one row with a fixed
+  // placeholder size whenever Bags is selected, so there's always a valid
+  // row for the hidden Stock/Low Stock Alert inputs to write into.
+  useEffect(() => {
+    if (!isBagsCategory) return;
+    const current = getValues("sizes");
+    if (current.length === 1 && current[0].size === BAGS_SIZE_LABEL) return;
+    replace([
+      {
+        id: current[0]?.id,
+        size: BAGS_SIZE_LABEL,
+        quantity: current[0]?.quantity ?? 0,
+        lowStockThreshold: current[0]?.lowStockThreshold ?? 5,
+      },
+    ]);
+  }, [isBagsCategory, getValues, replace]);
 
   useEffect(() => {
     if (!slugTouched && name) {
@@ -328,13 +352,20 @@ export function ProductForm({
             Optional for Perfumes — remove all sizes for a single-variant fragrance.
           </p>
         )}
+        {isBagsCategory && (
+          <p className="mb-2 text-xs text-muted-foreground">
+            Bags have no size — just set the stock count and low stock alert below.
+          </p>
+        )}
         <div className="space-y-2">
           {fields.map((field, index) => (
             <div key={field.id} className="flex items-end gap-2">
-              <div>
-                <Label className="mb-1.5">Size</Label>
-                <Input className="w-20" {...register(`sizes.${index}.size` as const)} />
-              </div>
+              {!isBagsCategory && (
+                <div>
+                  <Label className="mb-1.5">Size</Label>
+                  <Input className="w-20" {...register(`sizes.${index}.size` as const)} />
+                </div>
+              )}
               <div>
                 <Label className="mb-1.5">Stock</Label>
                 <Input
@@ -351,30 +382,34 @@ export function ProductForm({
                   {...register(`sizes.${index}.lowStockThreshold` as const, { valueAsNumber: true })}
                 />
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => remove(index)}
-                disabled={fields.length === 1 && !isPerfumeCategory}
-              >
-                Remove
-              </Button>
+              {!isBagsCategory && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => remove(index)}
+                  disabled={fields.length === 1 && !isPerfumeCategory}
+                >
+                  Remove
+                </Button>
+              )}
             </div>
           ))}
         </div>
         {errors.sizes && !Array.isArray(errors.sizes) && (
           <p className="mt-1.5 text-xs text-destructive">{errors.sizes.message}</p>
         )}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="mt-3"
-          onClick={() => append({ size: "", quantity: 0, lowStockThreshold: 5 })}
-        >
-          + Add Size
-        </Button>
+        {!isBagsCategory && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={() => append({ size: "", quantity: 0, lowStockThreshold: 5 })}
+          >
+            + Add Size
+          </Button>
+        )}
       </section>
 
       <section>
