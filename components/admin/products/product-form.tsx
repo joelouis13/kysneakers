@@ -146,10 +146,20 @@ export function ProductForm({
   async function onSubmit(values: ProductFormValues) {
     const imageInputs = toImageInputs(images);
 
-    const result =
-      mode === "create"
-        ? await createProduct(values, imageInputs)
-        : await updateProduct(initialProduct!.id, values, imageInputs);
+    let result;
+    try {
+      result =
+        mode === "create"
+          ? await createProduct(values, imageInputs)
+          : await updateProduct(initialProduct!.id, values, imageInputs);
+    } catch {
+      // A thrown/rejected Server Action call (e.g. exceeding the request
+      // body size limit, a network drop) never reaches the try/catch inside
+      // createProduct/updateProduct — without this, it fails with zero
+      // feedback: the button just stops spinning and nothing else happens.
+      toast.error("Something went wrong saving the product. Please try again.");
+      return;
+    }
 
     if ("error" in result) {
       toast.error(result.error);
