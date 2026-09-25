@@ -372,7 +372,9 @@ export interface Database {
         {
           id: string;
           product_id: string;
-          profile_id: string;
+          profile_id: string | null;
+          guest_name: string | null;
+          guest_email: string | null;
           order_item_id: string | null;
           rating: number;
           title: string | null;
@@ -384,6 +386,9 @@ export interface Database {
           deleted_at: string | null;
         },
         | "id"
+        | "profile_id"
+        | "guest_name"
+        | "guest_email"
         | "order_item_id"
         | "title"
         | "body"

@@ -30,7 +30,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { label: "Orders", href: "/admin/orders", icon: ClipboardList, enabled: true },
   { label: "Customers", href: "/admin/customers", icon: Users, enabled: false },
   { label: "Coupons", href: "/admin/coupons", icon: Ticket, enabled: false },
-  { label: "Reviews", href: "/admin/reviews", icon: Star, enabled: false },
+  { label: "Reviews", href: "/admin/reviews", icon: Star, enabled: true },
   { label: "Reports", href: "/admin/reports", icon: BarChart3, enabled: true },
   { label: "Settings", href: "/admin/settings", icon: Settings, enabled: false },
   { label: "Users", href: "/admin/users", icon: ShieldCheck, enabled: false },

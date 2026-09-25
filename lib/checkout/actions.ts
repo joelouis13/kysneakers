@@ -8,6 +8,8 @@ import { getVatRate, vatPortionOfInclusiveAmount } from "@/lib/currency/vat";
 import { channelForMethod, initiatePayment } from "@/lib/moolre/client";
 import { MoolreConfigError } from "@/lib/moolre/config";
 import { isValidGhPhone, toLocalPhone } from "@/lib/moolre/phone";
+import { initiateMobileMoneyCharge, mobileMoneyProviderForMethod, submitMobileMoneyOtp } from "@/lib/paystack/client";
+import { PaystackConfigError, isPaystackConfigured } from "@/lib/paystack/config";
 import { createCheckoutSession } from "@/lib/stripe/client";
 import { StripeConfigError } from "@/lib/stripe/config";
 import { createServiceRoleClient, createClient } from "@/lib/supabase/server";
@@ -91,6 +93,124 @@ async function attemptMoolrePayment(
     .eq("id", payment.id);
 
   return { status, providerMessage, requiresOtp };
+}
+
+/**
+ * Ghana Mobile Money, via Paystack — active once PAYSTACK_SECRET_KEY is set
+ * (see resolveGhanaProvider below), replacing Moolre per the 2026-08-14
+ * migration decision. Unlike Moolre, a fresh charge needs its OWN unique
+ * reference each attempt (Paystack rejects a reused one) — providerMessage
+ * stores the charge's data.status ("pay_offline"/"send_otp") as the marker
+ * the UI/submitPaymentOtp key off, mirroring Moolre's "TP14" convention.
+ */
+async function attemptPaystackCharge(
+  serviceClient: ServiceClient,
+  payment: { id: string; amount: number; method: PaymentMethod; payerPhone: string; customerEmail: string }
+): Promise<{ status: PaymentStatus; providerMessage: string | null; requiresOtp: boolean; redirectUrl?: string }> {
+  const localPayer = toLocalPhone(payment.payerPhone);
+  if (!localPayer) {
+    const result = { status: "failed" as PaymentStatus, providerMessage: "Invalid payer phone number.", requiresOtp: false };
+    await serviceClient
+      .from("payments")
+      .update({ provider: "paystack", status: result.status, provider_message: result.providerMessage })
+      .eq("id", payment.id);
+    return result;
+  }
+
+  const reference = `${payment.id}-${Date.now().toString(36)}`;
+
+  let status: PaymentStatus = "initiated";
+  let providerMessage: string | null = null;
+
+  try {
+    const response = await initiateMobileMoneyCharge({
+      email: payment.customerEmail,
+      amountGhs: payment.amount,
+      phone: localPayer,
+      provider: mobileMoneyProviderForMethod(payment.method),
+      reference,
+    });
+
+    if (!response.status || !response.data) {
+      status = "failed";
+      providerMessage = response.message || "Payment gateway error. Please try again.";
+    } else if (response.data.status === "send_otp" || response.data.status === "send_pin") {
+      status = "pending";
+      providerMessage = response.data.status;
+    } else if (response.data.status === "pay_offline" || response.data.status === "pending") {
+      status = "pending";
+      providerMessage = "pay_offline";
+    } else if (response.data.status === "success") {
+      // Rare (usually the webhook lands first) but handle it directly if Paystack ever returns it inline.
+      status = "successful";
+      providerMessage = response.data.gateway_response ?? null;
+    } else {
+      status = "failed";
+      providerMessage = response.data.gateway_response ?? response.message;
+    }
+
+    await serviceClient
+      .from("payments")
+      .update({ provider: "paystack", provider_reference: reference, status, provider_message: providerMessage })
+      .eq("id", payment.id);
+
+    return { status, providerMessage, requiresOtp: providerMessage === "send_otp" || providerMessage === "send_pin" };
+  } catch (err) {
+    status = "failed";
+    providerMessage =
+      err instanceof PaystackConfigError ? err.message : "Payment gateway error. Please try again.";
+    await serviceClient
+      .from("payments")
+      .update({ provider: "paystack", status, provider_message: providerMessage })
+      .eq("id", payment.id);
+    return { status, providerMessage, requiresOtp: false };
+  }
+}
+
+/** Continues a Paystack charge that came back needing an OTP — reuses the reference stored on the payment row, not a new one. */
+async function attemptPaystackOtp(
+  serviceClient: ServiceClient,
+  payment: { id: string; providerReference: string },
+  otp: string
+): Promise<{ status: PaymentStatus; providerMessage: string | null; requiresOtp: boolean }> {
+  let status: PaymentStatus = "pending";
+  let providerMessage: string | null = null;
+
+  try {
+    const response = await submitMobileMoneyOtp({ reference: payment.providerReference, otp });
+
+    if (!response.status || !response.data) {
+      status = "failed";
+      providerMessage = response.message || "Payment gateway error. Please try again.";
+    } else if (response.data.status === "success") {
+      status = "successful";
+      providerMessage = response.data.gateway_response ?? null;
+    } else if (response.data.status === "send_otp" || response.data.status === "send_pin") {
+      // Incorrect code — Paystack asks again rather than failing outright.
+      status = "pending";
+      providerMessage = response.data.status;
+    } else if (response.data.status === "pay_offline" || response.data.status === "pending") {
+      status = "pending";
+      providerMessage = "pay_offline";
+    } else {
+      status = "failed";
+      providerMessage = response.data.gateway_response ?? response.message;
+    }
+  } catch (err) {
+    status = "failed";
+    providerMessage = err instanceof PaystackConfigError ? err.message : "Payment gateway error. Please try again.";
+  }
+
+  await serviceClient
+    .from("payments")
+    .update({ status, provider_message: providerMessage })
+    .eq("id", payment.id);
+
+  return {
+    status,
+    providerMessage,
+    requiresOtp: providerMessage === "send_otp" || providerMessage === "send_pin",
+  };
 }
 
 /** International (non-Ghana) path — creates a hosted Stripe Checkout Session and hands back its URL to redirect to. */
@@ -430,6 +550,14 @@ export async function placeOrder(values: CheckoutValues): Promise<PlaceOrderResu
         .from("payments")
         .update({ status: attempt.status, provider_message: attempt.providerMessage })
         .eq("id", paymentRow.id);
+    } else if (isPaystackConfigured()) {
+      attempt = await attemptPaystackCharge(serviceClient, {
+        id: paymentRow.id,
+        amount: total,
+        method: paymentMethod,
+        payerPhone: data.payerPhone,
+        customerEmail: data.customerEmail,
+      });
     } else {
       attempt = await attemptMoolrePayment(serviceClient, {
         id: paymentRow.id,
@@ -506,16 +634,23 @@ export async function submitPaymentOtp(paymentId: string, otp: string): Promise<
   const serviceClient = createServiceRoleClient();
   const { data: payment } = await serviceClient
     .from("payments")
-    .select("id,order_id,amount,method,payer_phone")
+    .select("id,order_id,amount,method,payer_phone,provider,provider_reference")
     .eq("id", paymentId)
     .maybeSingle();
-  if (!payment || !payment.payer_phone) return { error: "Payment not found." };
+  if (!payment) return { error: "Payment not found." };
 
-  const attempt = await attemptMoolrePayment(
-    serviceClient,
-    { id: payment.id, amount: payment.amount, method: payment.method, payerPhone: payment.payer_phone },
-    parsed.data.otp
-  );
+  const attempt =
+    payment.provider === "paystack"
+      ? payment.provider_reference
+        ? await attemptPaystackOtp(serviceClient, { id: payment.id, providerReference: payment.provider_reference }, parsed.data.otp)
+        : { status: "failed" as PaymentStatus, providerMessage: "Payment reference missing.", requiresOtp: false }
+      : payment.payer_phone
+        ? await attemptMoolrePayment(
+            serviceClient,
+            { id: payment.id, amount: payment.amount, method: payment.method, payerPhone: payment.payer_phone },
+            parsed.data.otp
+          )
+        : { status: "failed" as PaymentStatus, providerMessage: "Payment not found.", requiresOtp: false };
 
   const order = await getOrderById(serviceClient, payment.order_id);
   if (!order) return { error: "Order not found." };
@@ -524,14 +659,32 @@ export async function submitPaymentOtp(paymentId: string, otp: string): Promise<
   return { success: true, order, requiresOtp: attempt.requiresOtp };
 }
 
+// A plain (non-literal) select string, same trick used throughout lib/admin
+// and lib/checkout — this hand-maintained Database type has no
+// Relationships metadata, so a literal select string with a nested
+// `orders(...)` join fails supabase-js's typed template-literal validation
+// with a SelectQueryError even though the real foreign key exists.
+const RETRY_PAYMENT_SELECT: string = "id,order_id,amount,method,payer_phone,provider,orders(customer_email)";
+
+type RetryPaymentRow = {
+  id: string;
+  order_id: string;
+  amount: number;
+  method: PaymentMethod;
+  payer_phone: string | null;
+  provider: string;
+  orders: { customer_email: string } | null;
+};
+
 export async function retryPayment(paymentId: string, payerPhone?: string): Promise<PlaceOrderResult> {
   const serviceClient = createServiceRoleClient();
-  const { data: payment } = await serviceClient
+  const { data: paymentRaw } = await serviceClient
     .from("payments")
-    .select("id,order_id,amount,method,payer_phone")
+    .select(RETRY_PAYMENT_SELECT)
     .eq("id", paymentId)
     .maybeSingle();
-  if (!payment) return { error: "Payment not found." };
+  if (!paymentRaw) return { error: "Payment not found." };
+  const payment = paymentRaw as unknown as RetryPaymentRow;
 
   let phone = payment.payer_phone;
   if (payerPhone) {
@@ -541,12 +694,21 @@ export async function retryPayment(paymentId: string, payerPhone?: string): Prom
   }
   if (!phone) return { error: "Enter your Mobile Money number." };
 
-  const attempt = await attemptMoolrePayment(serviceClient, {
-    id: payment.id,
-    amount: payment.amount,
-    method: payment.method,
-    payerPhone: phone,
-  });
+  const attempt =
+    payment.provider === "paystack"
+      ? await attemptPaystackCharge(serviceClient, {
+          id: payment.id,
+          amount: payment.amount,
+          method: payment.method,
+          payerPhone: phone,
+          customerEmail: payment.orders?.customer_email ?? "",
+        })
+      : await attemptMoolrePayment(serviceClient, {
+          id: payment.id,
+          amount: payment.amount,
+          method: payment.method,
+          payerPhone: phone,
+        });
 
   const order = await getOrderById(serviceClient, payment.order_id);
   if (!order) return { error: "Order not found." };

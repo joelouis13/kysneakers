@@ -46,8 +46,15 @@ export function OrderStatusView({ initialOrder }: { initialOrder: OrderStatusPay
   // never fired) — showing "waiting for payment approval" under a
   // "Delivered" badge is a straight contradiction, not just outdated.
   const paymentStillPending = order.status === "pending_payment";
+  // "TP14" is Moolre's OTP-required marker; "send_otp"/"send_pin" are
+  // Paystack's (see lib/checkout/actions.ts's attemptPaystackCharge) — same
+  // in-app OTP step, different provider vocabulary.
   const needsOtp =
-    paymentStillPending && payment?.status === "pending" && payment.providerMessage === "TP14";
+    paymentStillPending &&
+    payment?.status === "pending" &&
+    (payment.providerMessage === "TP14" ||
+      payment.providerMessage === "send_otp" ||
+      payment.providerMessage === "send_pin");
   const isPending = paymentStillPending && payment?.status === "pending" && !needsOtp;
   const isFailed = paymentStillPending && payment?.status === "failed";
   const isPaid = order.status === "paid" || payment?.status === "successful";

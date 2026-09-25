@@ -2,9 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Star } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -15,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth/auth-context";
 import { submitReview } from "@/lib/reviews/actions";
 import { useInvalidateMyReview, useMyReview } from "@/lib/reviews/hooks";
-import { reviewSchema, type ReviewValues } from "@/lib/reviews/schemas";
+import { buildReviewSchema, type ReviewValues } from "@/lib/reviews/schemas";
 import { cn } from "@/lib/utils";
 
 function StarRatingInput({
@@ -62,19 +60,20 @@ export function ReviewForm({
   productSlug: string;
 }) {
   const { user } = useAuth();
-  const pathname = usePathname();
   const { data: myReview, isLoading } = useMyReview(productId, user?.id ?? null);
   const invalidateMyReview = useInvalidateMyReview();
 
+  const schema = useMemo(() => buildReviewSchema(!user), [user]);
   const {
     register,
     handleSubmit,
     setValue,
     control,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<ReviewValues>({
-    resolver: zodResolver(reviewSchema),
-    defaultValues: { rating: 0, body: "" },
+    resolver: zodResolver(schema),
+    defaultValues: { rating: 0, body: "", guestName: "", guestEmail: "" },
   });
   const rating = useWatch({ control, name: "rating" });
 
@@ -85,25 +84,19 @@ export function ReviewForm({
       return;
     }
     toast.success("Review submitted — pending moderation");
-    if (user) invalidateMyReview(productId, user.id);
+    if (user) {
+      invalidateMyReview(productId, user.id);
+    } else {
+      reset({ rating: 0, title: "", body: "", guestName: "", guestEmail: "" });
+    }
   }
 
-  if (!user) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
-          <p className="text-sm text-muted-foreground">Log in to leave a review.</p>
-          <Button asChild variant="secondary">
-            <Link href={`/login?redirect=${encodeURIComponent(pathname)}`}>Log in</Link>
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
+  // Signed-in users get a "you already reviewed this" check via RLS; guests
+  // have no session to scope that lookup to, so they always see the form —
+  // acceptable since there's no way to reliably recognize a returning guest.
+  if (user && isLoading) return null;
 
-  if (isLoading) return null;
-
-  if (myReview) {
+  if (user && myReview) {
     return (
       <Card>
         <CardContent className="space-y-2 py-6">
@@ -139,6 +132,28 @@ export function ReviewForm({
               <p className="mt-1.5 text-xs text-destructive">{errors.rating.message}</p>
             )}
           </div>
+
+          {!user && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <Input placeholder="Your name" aria-label="Your name" {...register("guestName")} />
+                {errors.guestName && (
+                  <p className="mt-1.5 text-xs text-destructive">{errors.guestName.message}</p>
+                )}
+              </div>
+              <div>
+                <Input
+                  type="email"
+                  placeholder="Your email"
+                  aria-label="Your email"
+                  {...register("guestEmail")}
+                />
+                {errors.guestEmail && (
+                  <p className="mt-1.5 text-xs text-destructive">{errors.guestEmail.message}</p>
+                )}
+              </div>
+            </div>
+          )}
 
           <div>
             <Input placeholder="Title (optional)" aria-label="Review title" {...register("title")} />

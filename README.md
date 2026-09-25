@@ -16,7 +16,7 @@
 KYSneakers is a full-stack storefront and admin system built from scratch — no Shopify, WooCommerce, or Magento.
 It handles two distinct markets from one codebase:
 
-- **Ghana** — priced in GHS, paid via Mobile Money (MTN, Telecel, AirtelTigo) through Moolre.
+- **Ghana** — priced in GHS, paid via Mobile Money (MTN, Telecel, AirtelTigo) through Paystack (Moolre as fallback).
 - **International** — priced in USD/EUR/GBP (auto-detected by location, with live FX rates), paid by card through Stripe.
 
 Admins manage the entire catalog, inventory, and order pipeline from a dedicated dashboard — the storefront and
@@ -31,7 +31,7 @@ admin app share one Next.js project but are fully separated at the layout level.
 | Forms & validation | React Hook Form + Zod |
 | Data fetching | TanStack Query (client) + Server Components/Actions (server) |
 | Database & Auth | [Supabase](https://supabase.com) (Postgres, Row Level Security, Auth, Storage) |
-| Payments | [Moolre](https://moolre.com) (Ghana Mobile Money) + [Stripe](https://stripe.com) (international cards) |
+| Payments | [Paystack](https://paystack.com) (Ghana Mobile Money, with [Moolre](https://moolre.com) as fallback) + [Stripe](https://stripe.com) (international cards) |
 | Email | [Resend](https://resend.com) |
 | SMS | [Hubtel](https://hubtel.com) |
 | Deployment | [Vercel](https://vercel.com) (primary) or Docker (self-hosted) |
@@ -96,7 +96,8 @@ cp .env.local.example .env.local
 | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client-side Supabase access |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only privileged operations (checkout, admin writes) — never expose this |
 | `SITE_URL` | Absolute URLs in emails, redirects, and webhook callbacks (server-only, no `NEXT_PUBLIC_` prefix) |
-| `MOOLRE_API_USER` / `MOOLRE_API_KEY` / `MOOLRE_ACCOUNT_ID` / `MOOLRE_WEBHOOK_SECRET` | Ghana Mobile Money checkout |
+| `PAYSTACK_SECRET_KEY` | Ghana Mobile Money checkout — set this to route Ghana checkout through Paystack instead of Moolre |
+| `MOOLRE_API_USER` / `MOOLRE_API_KEY` / `MOOLRE_ACCOUNT_ID` / `MOOLRE_WEBHOOK_SECRET` | Ghana Mobile Money checkout fallback, used while `PAYSTACK_SECRET_KEY` is unset |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | International card checkout |
 | `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | Transactional email |
 | `HUBTEL_CLIENT_ID` / `HUBTEL_CLIENT_SECRET` / `HUBTEL_SENDER_ID` | Transactional SMS |
@@ -129,7 +130,7 @@ npm run lint    # ESLint
 app/
   (storefront)/     # customer-facing routes — shop, cart, checkout, orders, account, etc.
   admin/            # staff-only dashboard, separate layout/chrome from the storefront
-  api/webhooks/      # Stripe + Moolre payment webhooks
+  api/webhooks/      # Stripe + Paystack + Moolre payment webhooks
 lib/
   admin/            # admin-side queries, actions, schemas per resource (products, orders, ...)
   catalog/          # product search/listing (backed by Postgres RPCs)
@@ -172,9 +173,13 @@ would otherwise leave the key readable in the image's layer history.
 
 ## Payments
 
-- **Ghana**: `lib/moolre/` initiates a Mobile Money push payment; the webhook (`app/api/webhooks/moolre/route.ts`)
-  never trusts the callback payload directly — it always re-verifies via Moolre's status endpoint before marking
-  a payment confirmed.
+- **Ghana**: `lib/paystack/` initiates a Mobile Money charge once `PAYSTACK_SECRET_KEY` is set; the webhook
+  (`app/api/webhooks/paystack/route.ts`) verifies Paystack's signature (`x-paystack-signature`, HMAC-SHA512 of
+  the raw body) *and* independently re-verifies via the transaction endpoint before marking a payment confirmed.
+  `lib/moolre/` is the fallback while that key is unset — `lib/checkout/actions.ts`'s `isPaystackConfigured()`
+  check decides which one handles a given Ghana checkout. Moolre's own webhook (`app/api/webhooks/moolre/route.ts`)
+  never trusts its callback payload at all (undocumented, unsigned) — always re-verifies via Moolre's status
+  endpoint instead.
 - **International**: `lib/stripe/` creates a hosted Stripe Checkout Session; the webhook verifies Stripe's
   signature before confirming payment.
 

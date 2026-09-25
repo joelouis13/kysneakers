@@ -19,6 +19,7 @@ const FOOTER_LINKS: { title: string; links: { label: string; href: string }[] }[
     title: "Customer Care",
     links: [
       { label: "Track Order", href: "/track-order" },
+      { label: "Write a Review", href: "/write-review" },
       { label: "FAQ", href: "/faq" },
       { label: "Contact Us", href: "/contact" },
       { label: "Shipping & Returns", href: "/faq#shipping" },
