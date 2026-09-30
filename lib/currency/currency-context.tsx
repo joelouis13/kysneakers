@@ -21,10 +21,14 @@ type CurrencyContextValue = {
   /** Takes a EUR-denominated amount (e.g. the minimum order total), returns it formatted in the visitor's currency. */
   formatFromEur: (amountInEur: number) => string;
   /**
-   * Product-price display: uses the admin-set EUR price directly (no FX
-   * conversion) when the visitor is in EUR and one is set; otherwise falls
-   * back to formatFromGhs. Generic over any ghs/eur pair (regular, sale,
-   * effective), not product-shaped, so it works for whichever price field.
+   * Product-price display: when an admin-set EUR price exists, it's the
+   * authoritative international price, so every non-GHS currency converts
+   * from it (EUR passed through as-is, others via convertBetween) instead of
+   * from the GHS canonical price — that's the whole point of the override
+   * (see 20260806000017_eur_pricing.sql). GHS visitors always see the GHS
+   * price. Falls back to formatFromGhs when no EUR override is set. Generic
+   * over any ghs/eur pair (regular, sale, effective), not product-shaped, so
+   * it works for whichever price field.
    */
   formatPrice: (ghsAmount: number, eurAmount: number | null) => string;
 };
@@ -54,10 +58,13 @@ export function CurrencyProvider({
         formatCurrency(convertBetween(amountInUsd, "USD", currency, rates), currency),
       formatFromEur: (amountInEur: number) =>
         formatCurrency(convertBetween(amountInEur, "EUR", currency, rates), currency),
-      formatPrice: (ghsAmount: number, eurAmount: number | null) =>
-        currency === "EUR" && eurAmount != null
+      formatPrice: (ghsAmount: number, eurAmount: number | null) => {
+        if (currency === "GHS") return formatCurrency(convert(ghsAmount, currency, rates), currency);
+        if (eurAmount == null) return formatCurrency(convert(ghsAmount, currency, rates), currency);
+        return currency === "EUR"
           ? formatCurrency(eurAmount, "EUR")
-          : formatCurrency(convert(ghsAmount, currency, rates), currency),
+          : formatCurrency(convertBetween(eurAmount, "EUR", currency, rates), currency);
+      },
     }),
     [currency, rates, vatRate]
   );
